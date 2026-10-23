@@ -6,7 +6,9 @@ Moteur de composition des restitutions : un Markdown à grammaire fermée devien
 - **côté serveur**, importé par l'application pour valider une remise et composer un export (`dist/node/index.js`) ;
 - **avec une autre charte** (logo, couleurs, police, motif) : la charte est une donnée, les compositions sont du code.
 
-Nom provisoire du paquet, licence à choisir.
+Code propriétaire (UNLICENSED), publié pour être chargé par les applications de Vauban et de ses clients : aucune réutilisation, copie ni modification sans accord écrit (voir `LICENSE`).
+
+URL CDN : `https://cdn.jsdelivr.net/npm/@vauban/restitution@0.1.0/dist/browser/restitution.js`
 
 ## Le document minimal d'un artefact
 
