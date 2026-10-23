@@ -16,7 +16,7 @@ URL CDN : `https://cdn.jsdelivr.net/npm/@vaubanhq/restitution@0.1.3/dist/browser
 <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>…</title></head><body><script type="text/markdown" id="restitution">…le Markdown…</script><script src="https://cdn.jsdelivr.net/npm/@vaubanhq/restitution@0.1.3/dist/browser/restitution.js"></script></body></html>
 ```
 
-Le chargeur lit le script `#restitution` (le Markdown peut être indenté dans la page), le lit selon la grammaire, compose avec `VAUBAN_CHARTE` (ou la charte posée dans `window.RESTITUTION_CHARTE` avant le chargeur), injecte le HTML et le CSS, charge la police (Jost, avec repli système) et, s'il y a une carte ou un parcours à dessiner, Mermaid 11.12.0 depuis cdnjs (avec contrôle d'intégrité SRI sha384, `scripts/sri.mjs`). Si le Markdown sort de la grammaire, la page affiche la liste des refus (ligne et raison) au lieu du document.
+Le chargeur lit le script `#restitution` (le Markdown peut être indenté dans la page), le lit selon la grammaire, compose avec `VAUBAN_CHARTE` (ou la charte posée dans `window.RESTITUTION_CHARTE` avant le chargeur), injecte le HTML et le CSS, charge la police (Jost, avec repli système) et, s'il y a un schéma à dessiner, Mermaid 11.12.0 depuis cdnjs (avec contrôle d'intégrité SRI sha384, `scripts/sri.mjs`). Si le Markdown sort de la grammaire, la page affiche la liste des refus (ligne et raison) au lieu du document.
 
 Sans script (un canevas qui n'exécute rien), rien ne s'affiche : le repli est le Markdown dans la conversation.
 
@@ -53,11 +53,11 @@ flowchart TB
 | Genre | Porte | Composition |
 |---|---|---|
 | `recit` | un récit, des exergues, des chiffres, des `###` intertitres sur la même page (synthèse) | `vd-text`, `vd-pullquote`, `vd-figure` |
-| `cas` | des cas déroulés (`###`), schéma ou ligne `→` | `vd-subheading`, `vd-journey`, `vd-timeline` |
+| `cas` | des cas déroulés (`###`), schéma ou ligne `→` | `vd-subheading`, Mermaid, `vd-journey` pour la ligne `→` |
 | `chiffres` | des chiffres, chacun dans sa phrase | `vd-figure-group` |
-| `frise` | des épisodes datés (`timeline`) | `vd-timeline` |
+| `frise` | des épisodes datés (`timeline`) | Mermaid |
 | `carte` | ses sujets autour d'elle (`mindmap`) | Mermaid |
-| `journee` | une journée type (`flowchart`, ou `journey` avec scores) | `vd-journey`, Mermaid |
+| `journee` | une journée type (`flowchart`, ou `journey` avec scores) | Mermaid |
 | `avant-apres` | un tableau à 2 colonnes | `vd-comparison` |
 | `tableau` | un tableau à colonnes | `vd-table` |
 | `lecture` | `## Ce que je comprends de vos cas {lecture}`, ouvert par `Lecture de Vauban, pas vos mots.` | `vd-callout` |
@@ -65,7 +65,7 @@ flowchart TB
 
 Un chiffre dit se lit comme du texte : la ligne entière à la taille du chapeau, le nombre en bleu. L'exergue est à 24 px.
 
-Les flowcharts (déroulés) et les timelines (frises) sont dessinés par le moteur, sans Mermaid : une étape par ligne, l'étape qui coince porte la marque d'étape du design system. Seules la carte et le parcours passent par Mermaid ; sans lui, leur texte de secours reste affiché.
+Tous les schémas passent par Mermaid, avec un thème tiré de la charte : flowcharts (déroulés, avec leurs branches et leurs boucles), timelines (frises), carte et parcours. L'étape marquée `class X coince` ressort dans la couleur d'accent de la charte (le moteur pose lui-même la `classDef`, celle de l'assistant est ignorée). Sans Mermaid, le texte de secours de chaque schéma reste affiché. Un bloc `cas` sans carte avant son premier `###` n'a pas de page de titre seule : son titre coiffe la page du premier cas.
 
 La liste complète des refus est dans `test/grammar.test.ts`.
 

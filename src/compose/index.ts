@@ -51,14 +51,14 @@ function logoParts(charte: Charte): { viewBox: string; label: string; inner: str
   return { viewBox, label: /\baria-label="([^"]*)"/.exec(m[1]!)?.[1] ?? charte.name, inner: m[2]! };
 }
 
-function renderItem(item: Item, blockKind: Parameters<typeof b.table>[0], blockTitle: string): string {
+function renderItem(item: Item, blockKind: Parameters<typeof b.table>[0], blockTitle: string, charte: Charte): string {
   switch (item.kind) {
     case 'quote':
       return b.pullquote(item.text);
     case 'figures':
       return b.figures(item.figures);
     case 'diagram':
-      return b.diagram(item.diagram);
+      return b.diagram(item.diagram, charte);
     case 'flow':
       return b.flow(item.steps);
     case 'table':
@@ -139,13 +139,15 @@ export function composeParts(doc: RestitutionDocument, charte: Charte): Composed
           continue;
         }
         if (item.kind === 'p') pg.body.push({ p: item.text });
-        else pg.body.push({ html: renderItem(item, block.kind, block.title) });
+        else pg.body.push({ html: renderItem(item, block.kind, block.title, charte) });
       }
     };
     feed(block.items);
     block.cases.forEach((c, k) => {
       // A case has its own page; a section of a recit stays on the page of its part.
-      if (block.kind === 'cas') newPage(null, null, c.title);
+      // A block with nothing before its first case has no page of its own: its title heads the first case page.
+      const headsFirstCase = k === 0 && pg.body.length === 0 && pg.take === null && pg.reading === null;
+      if (block.kind === 'cas' && !headsFirstCase) newPage(null, null, c.title);
       pg.body.push({ sub: c.title, number: block.kind === 'cas' ? pad2(k + 1) : null });
       feed(c.items);
     });
