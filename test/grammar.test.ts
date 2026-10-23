@@ -164,6 +164,35 @@ describe('journey scores', () => {
   });
 });
 
+describe('calendar days', () => {
+  const meta = (d: string) => parse(`# A\n${d} · Martin\n\n## T {recit}\nx\n`).ok;
+  it('requires the day to exist in the month, leap years included', () => {
+    expect(meta('29 février 2028')).toBe(true);
+    expect(meta('29 février 2027')).toBe(false);
+    expect(meta('29 février 2100')).toBe(false);
+    expect(meta('29 février 2000')).toBe(true);
+    expect(meta('31 avril 2026')).toBe(false);
+    expect(meta('30 avril 2026')).toBe(true);
+    expect(meta('31 décembre 2026')).toBe(true);
+  });
+});
+
+describe('figures and flows', () => {
+  const fig = (l: string) => parse(wrap(l)).ok;
+  it('takes one bold span only', () => {
+    expect(fig('- « **Trois** jours » ici.')).toBe(true);
+    expect(fig('- « **Trois** jours **perdus** » ici.')).toBe(false);
+    expect(fig('- « **Trois** jours » ici **encore**.')).toBe(false);
+  });
+  const flow = (l: string) => parse(wrap(`### Un cas\n${l}`, '## C {cas}')).ok;
+  it('refuses an empty step or a lone [coince]', () => {
+    expect(flow('vente → [coince] montage → fin')).toBe(true);
+    expect(flow('vente → [coince] → montage')).toBe(false);
+    expect(flow('vente →  → montage')).toBe(false);
+    expect(flow('[coince] → montage')).toBe(false);
+  });
+});
+
 describe('cover date', () => {
   it('accepts the first of the month written 1er', () => {
     const d = parseOk('# A\n1er novembre 2026 · Martin\n\n## T {recit}\nx\n');

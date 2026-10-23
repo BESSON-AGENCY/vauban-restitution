@@ -58,9 +58,14 @@ const LABELS: Record<ItemKind, string> = {
   journey: 'un schéma journey',
 };
 
+function daysIn(month: number, year: number): number {
+  if (month === 2) return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28;
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
 function isoDate(day: number, month: string, year: number): string | null {
   const m = MONTHS[month];
-  if (!m || day < 1 || day > 31) return null;
+  if (!m || day < 1 || day > daysIn(m, year)) return null;
   return `${year}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
@@ -106,6 +111,10 @@ function readFlowchart(code: string[], err: (msg: string) => void): Diagram | nu
   }
   if (order.length === 0) {
     err('le flowchart ne contient aucune étape');
+    return null;
+  }
+  if (order.some((id) => labels.has(id) && !splitBr(labels.get(id)!)[0])) {
+    err('une étape du flowchart n’est jamais vide');
     return null;
   }
   const steps: FlowStep[] = order.map((id) => {
@@ -241,8 +250,9 @@ function isTake(t: string): boolean {
 /** Parses « step (roles) → [coince] step → … ». */
 function readFlowLine(text: string): FlowStep[] {
   return text.split(' → ').map((raw) => {
-    const stuck = raw.startsWith('[coince] ');
-    const st = stuck ? raw.slice('[coince] '.length) : raw;
+    const mark = /^\[coince\](?:\s+(.*))?$/.exec(raw);
+    const stuck = mark !== null;
+    const st = mark ? (mark[1] ?? '') : raw;
     const m = /^(.*?) \((.*)\)$/.exec(st);
     return { label: m ? m[1]! : st, roles: m ? m[2]! : '', stuck };
   });
@@ -250,7 +260,8 @@ function readFlowLine(text: string): FlowStep[] {
 
 function readFigure(line: number, text: string): Figure | null {
   const m = FIG.exec(text);
-  if (!m) return null;
+  // One bold span only: it carries the number or the duration said, nothing else.
+  if (!m || (text.match(/\*\*/g) ?? []).length !== 2) return null;
   return { line, before: m[1]!, value: m[2]!, unit: m[3]!.trim(), context: m[4]! };
 }
 
@@ -499,7 +510,11 @@ export function parse(markdown: string): ParseResult {
     }
     const t = p.join(' ');
     if (t.includes(' → ')) {
-      if (cur.kind === 'cas' && sub !== null) add({ kind: 'flow', line: n, steps: readFlowLine(t) }, n);
+      if (cur.kind === 'cas' && sub !== null) {
+        const steps = readFlowLine(t);
+        if (steps.some((st) => !st.label.trim())) err(n, 'une étape du déroulé → n’est jamais vide (ni réduite à [coince])');
+        else add({ kind: 'flow', line: n, steps }, n);
+      }
       else err(n, 'la ligne → (déroulé de secours) n’existe que dans un ### cas');
     } else if (isTake(t)) {
       add({ kind: 'take', line: n, text: t.slice(2, -2) }, n);
