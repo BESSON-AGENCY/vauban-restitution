@@ -1,0 +1,63 @@
+/* Première direction graphique, à relire. Dimensions d'impression : pas de moteur de pagination. */
+.vd-document {
+  --vd-ink: var(--ds-navy);
+  --vd-muted: var(--ds-slate);
+  --vd-accent: var(--ds-blue);
+  --vd-soft: var(--ds-mist);
+  --vd-paper: var(--ds-white);
+  --vd-line: var(--ds-silver);
+  --vd-rule: 1px;
+  --vd-body: 1rem;
+  --vd-small: 0.875rem;
+  --vd-label: 0.75rem;
+  --vd-lead: 1.25rem;
+  --vd-title: 3.25rem;
+  --vd-opening-title: 3.5rem;
+  --vd-cover-title: 4.2rem;
+  --vd-section-title: 3.6rem;
+  --vd-subtitle: 1.625rem;
+  --vd-quote: 2.25rem;
+  --vd-card-title: 1.25rem;
+  --vd-figure: 4.6rem;
+  --vd-figure-compact: 3rem;
+  --vd-leading: 1.55;
+  --vd-radius: var(--ds-radius-field);
+  --vd-gap: var(--ds-space-6);
+  --vd-page-padding: var(--ds-space-12);
+  font-family: var(--ds-font-body);
+  font-weight: var(--ds-weight-body);
+  font-size: var(--vd-body);
+  line-height: var(--vd-leading);
+  color: var(--vd-ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.vd-document[data-tone='monochrome'] {
+  --vd-accent: var(--ds-navy);
+  --vd-soft: var(--ds-cloud);
+}
+
+/* Presentation is an explicit reading profile, never a content-fit reduction. */
+@media print, screen and (min-width: 801px) {
+  .vd-document[data-format='slide'] {
+    --vd-body: 1.25rem;
+    --vd-small: 1rem;
+    --vd-label: 0.8125rem;
+    --vd-lead: 1.5rem;
+    --vd-title: 3rem;
+    --vd-opening-title: 3.5rem;
+    --vd-subtitle: 1.75rem;
+    --vd-card-title: 1.5rem;
+  }
+}
+
+@media print {
+  .skip-link {
+    display: none !important;
+  }
+}
+
+/* Document compositions provide their own margins instead of browser defaults. */
+@page {
+  margin: 0;
+}

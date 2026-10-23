@@ -1,0 +1,49 @@
+{
+  "name": "@vauban/restitution",
+  "version": "0.1.0",
+  "description": "Closed-grammar Markdown to A4 restitution document: parser, compositions, charte, and a self-contained browser loader.",
+  "type": "module",
+  "private": false,
+  "main": "./dist/node/index.js",
+  "module": "./dist/node/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/node/index.js"
+    },
+    "./browser": "./dist/browser/restitution.js"
+  },
+  "jsdelivr": "dist/browser/restitution.js",
+  "unpkg": "dist/browser/restitution.js",
+  "files": [
+    "dist/node",
+    "dist/types",
+    "dist/browser",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build:css": "node scripts/build-css.mjs",
+    "build": "node scripts/build.mjs",
+    "pretest": "node scripts/build-css.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "node scripts/lint.mjs",
+    "drift": "node scripts/check-ds-drift.mjs",
+    "check": "npm run typecheck && npm run lint && npm run drift",
+    "example": "node scripts/example.mjs",
+    "captures": "sh scripts/captures.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "esbuild": "^0.28.2",
+    "happy-dom": "^21.0.4",
+    "postcss": "^8.5.31",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}
