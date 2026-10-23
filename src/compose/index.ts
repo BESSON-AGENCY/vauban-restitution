@@ -4,7 +4,7 @@ import { RESTITUTION_CSS } from '../css.restitution.js';
 import type { Item, RestitutionDocument } from '../types.js';
 import * as b from './blocks.js';
 import { esc, inline, pad2 } from './html.js';
-import { mermaidBootScript } from './mermaid.js';
+import { bootScript } from './mermaid.js';
 
 interface Page {
   heading: string | null;
@@ -26,13 +26,15 @@ export interface Composed {
   css: string;
   /** The pages, as HTML (a hidden logo symbol then `<main>`). */
   html: string;
-  /** Script that draws the Mermaid boxes, or null when the document has none. */
+  /** The same script as `script`, or null when the document has no diagram (kept for callers of 0.1). */
   mermaidScript: string | null;
+  /** The page script (diagrams fitted to their page, page continuation, footers renumbered). Always present. */
+  script: string;
   pageCount: number;
 }
 
 export interface ComposeOptions {
-  /** Inline the Mermaid script in the full page (default true). */
+  /** Inline the page script in the full page (default true). */
   mermaid?: boolean;
 }
 
@@ -190,13 +192,15 @@ export function composeParts(doc: RestitutionDocument, charte: Charte): Composed
     '</svg>' +
     `<main class="vr-restitution">${cover}${arts.join('')}</main>`;
   const hasMermaid = html.includes('data-mermaid="');
+  const script = bootScript(charte);
   return {
     title: doc.title,
     lang: 'fr',
     fontsHref: charte.fonts.stylesheet,
     css: tokensCss(charte) + DS_CSS + RESTITUTION_CSS,
     html,
-    mermaidScript: hasMermaid ? mermaidBootScript(charte) : null,
+    mermaidScript: hasMermaid ? script : null,
+    script,
     pageCount: total,
   };
 }
@@ -205,7 +209,7 @@ export function composeParts(doc: RestitutionDocument, charte: Charte): Composed
 export function compose(doc: RestitutionDocument, charte: Charte, options: ComposeOptions = {}): string {
   const c = composeParts(doc, charte);
   const fonts = c.fontsHref ? `<link rel="stylesheet" href="${esc(c.fontsHref)}">` : '';
-  const script = c.mermaidScript && options.mermaid !== false ? `<script>${c.mermaidScript}</script>` : '';
+  const script = options.mermaid !== false ? `<script>${c.script}</script>` : '';
   return (
     `<!doctype html>\n<html lang="${c.lang}">\n<head>\n<meta charset="utf-8">\n` +
     '<meta name="viewport" content="width=device-width,initial-scale=1">\n' +

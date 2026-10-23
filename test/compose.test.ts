@@ -8,7 +8,7 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
 // Frozen fingerprint of the reference restitution composed with VAUBAN_CHARTE. It changes when a
 // composition, the profile or a copied DS sheet changes: update it on purpose, after looking at the render.
-const REFERENCE_FINGERPRINT = '889f2d99b6e327ba81ba9a82ae0b3f7cd0831aaecdf4456db7f6a7c2bfc23d49';
+const REFERENCE_FINGERPRINT = '82fbebb0560ff19b0558a56417f8a16e5e8f78dd5e450fb4b09ab29f1a463acc';
 
 describe('reference composition', () => {
   const doc = parseOk(fixture('reference.md'));
@@ -47,13 +47,16 @@ describe('reference composition', () => {
     expect(c.html).not.toMatch(/amber|#845200/);
   });
 
-  it('ships a boot script that is plain ES5 and keeps a diagram inside its A4 page', () => {
-    const script = composeParts(doc, VAUBAN_CHARTE).mermaidScript!;
+  it('ships a boot script that is plain ES5 and keeps a diagram and the text inside their A4 page', () => {
+    const script = composeParts(doc, VAUBAN_CHARTE).script;
     expect(() => new Function(script)).not.toThrow();
     expect(script).not.toMatch(/=>|\blet\b|\bconst\b|`|\?\./);
     // body size of the design system and the smallest text a diagram may keep before it gets a page of its own
     expect(script).toContain('"body":16,"min":11');
     expect(script).toContain('.va-page');
+    // page continuation: cuts between elements, repeats a table head, keeps the reading box going
+    expect(script).toContain('thead');
+    expect(script).toContain('.vd-callout');
   });
 
   it('keeps the schemas for Mermaid, with a text fallback, and loads Mermaid 11.12.0 only then', () => {
@@ -66,7 +69,8 @@ describe('reference composition', () => {
     expect(composeParts(noMap, VAUBAN_CHARTE).mermaidScript).not.toBeNull(); // genres.md has a mindmap
     const plain = parseOk('# T\n23 octobre 2026 · A\n\n## B {recit}\nUn texte.\n');
     expect(composeParts(plain, VAUBAN_CHARTE).mermaidScript).toBeNull();
-    expect(compose(plain, VAUBAN_CHARTE)).not.toContain('<script');
+    expect(composeParts(plain, VAUBAN_CHARTE).script).toContain('function paginate');
+    expect(compose(plain, VAUBAN_CHARTE, { mermaid: false })).not.toContain('<script');
   });
 
   it('has no kicker, no em dash, no assistant name', () => {

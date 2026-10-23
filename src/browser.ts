@@ -63,11 +63,9 @@ function run() {
     document.head.appendChild(link);
   }
   show(composed.css, composed.html);
-  if (composed.mermaidScript) {
-    const script = document.createElement('script');
-    script.textContent = composed.mermaidScript;
-    document.body.appendChild(script);
-  }
+  const script = document.createElement('script');
+  script.textContent = composed.script;
+  document.body.appendChild(script);
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);

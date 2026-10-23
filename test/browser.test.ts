@@ -48,7 +48,9 @@ describe('browser bundle', () => {
     const scripts = [...withMap.document.querySelectorAll('script')].map((s) => s.textContent ?? '');
     expect(scripts.some((t) => t.includes('cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js'))).toBe(true);
     const plain = page('# T\n23 octobre 2026 · A\n\n## B {recit}\nUn texte.\n');
-    expect([...plain.document.querySelectorAll('script')].filter((s) => s.id !== 'restitution')).toHaveLength(0);
+    // the page script is always there (page continuation); it loads Mermaid only when a box asks for it
+    expect([...plain.document.querySelectorAll('script')].filter((s) => s.id !== 'restitution')).toHaveLength(1);
+    expect(plain.document.querySelector('.vr-diagram')).toBeNull();
     expect(plain.document.querySelectorAll('.va-page')).toHaveLength(2);
   });
 
