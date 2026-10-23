@@ -1,0 +1,23 @@
+/* Rules the engine needs and the design system does not have. Each one is explained in AUDIT-DS.md. */
+
+/* 1. Stacked pages on screen: the DS gallery provides the surface and the spacing, an artefact does not. */
+body{margin:0;padding:32px 0;background:var(--ds-mist)}
+.vr-restitution{display:flex;flex-direction:column;gap:32px}
+@media print{body{padding:0;background:none}.vr-restitution{display:block}}
+
+/* 2. Pull quote on A4 at the size of the subheading (24 px): the DS has no A4 pull quote and its base size is 36 px. */
+.va-page{--vd-quote:var(--vd-subtitle)}
+
+/* 3. Figures said in a sentence are text: one line each at the chapeau size, the number in the accent colour. */
+.vr-figures{display:grid;gap:12px}
+.vr-figures .va-intro{margin-top:0}
+.vr-figure-number{color:var(--ds-blue);font-weight:600}
+
+/* 4. Mermaid boxes (mindmap, journey): not a DS composition, shown only as text until drawn. */
+.vr-diagram[data-mermaid] pre{display:none}
+.vr-diagram{display:flex;flex-direction:column;align-items:center;min-width:0;break-inside:avoid}
+.vr-diagram svg{max-width:100%;height:auto}
+.vr-diagram-fallback{font-size:var(--vd-small);color:var(--vd-muted);align-self:stretch}
+
+/* 5. Table headings: the DS gets their left alignment from Tailwind classes that the engine does not carry. */
+.vd-table th{text-align:left}

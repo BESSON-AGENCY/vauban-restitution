@@ -303,6 +303,8 @@ export function parse(markdown: string): ParseResult {
   let title: string | null = null;
   let metaRaw = '';
   let metaLine = 0;
+  let coverFor = '';
+  let coverObjective = '';
   const blocks: Block[] = [];
   let cur: Block | null = null;
   let sub: Case | null = null;
@@ -322,7 +324,8 @@ export function parse(markdown: string): ParseResult {
       cur.items.push(item);
       return;
     }
-    const accepts = sub !== null ? CASE_ACCEPTS : CATALOGUE[cur.kind].accepts;
+    // A ### of a recit is a section of the same page: it accepts what the recit accepts.
+    const accepts = sub !== null && cur.kind === 'cas' ? CASE_ACCEPTS : CATALOGUE[cur.kind].accepts;
     if (!accepts.includes(kind)) {
       err(line, `${LABELS[kind]} n’est pas accepté dans un bloc ${cur.kind}`);
       return;
@@ -359,6 +362,23 @@ export function parse(markdown: string): ParseResult {
       metaRaw = (raw[i] ?? '').trim();
       metaLine = i + 1;
       i++;
+      // Up to two more cover lines before the first ##: « Pour … », then an objective sentence.
+      for (;;) {
+        let j = i;
+        while (j < raw.length && !raw[j]!.trim()) j++;
+        const next = raw[j];
+        if (next === undefined || /^(#|>|- |---|```|\|)/.test(next) || refused.has(j)) break;
+        const text = next.trim();
+        if (coverFor === '' && coverObjective === '' && /^Pour(\s|$)/.test(text)) {
+          coverFor = text.slice('Pour'.length).trim();
+          if (!coverFor) err(j + 1, 'la ligne « Pour » dit pour qui : Pour Prénom, Organisation ou Pour Organisation');
+        } else if (coverObjective === '' && !/^Pour(\s|$)/.test(text)) {
+          coverObjective = text;
+        } else {
+          err(j + 1, 'la couverture accepte au plus trois lignes : date · prénom, Pour …, un objectif');
+        }
+        i = j + 1;
+      }
       continue;
     }
     if (title === null) {
@@ -394,8 +414,8 @@ export function parse(markdown: string): ParseResult {
       continue;
     }
     if (l.startsWith('### ')) {
-      if (cur.kind !== 'cas') {
-        err(n, '### n’existe que dans un bloc cas');
+      if (cur.kind !== 'cas' && cur.kind !== 'recit') {
+        err(n, '### n’existe que dans un bloc cas ou recit');
         i++;
         continue;
       }
@@ -530,7 +550,7 @@ export function parse(markdown: string): ParseResult {
     const iso = m ? isoDate(parseInt(m[1]!, 10), m[2]!, Number(m[3])) : null;
     if (!m) err(metaLine || 2, 'la ligne qui suit # doit être « date · prénom » ou « date » (ex. 23 octobre 2026 · Martin)');
     else if (!iso) err(metaLine, `date illisible : « ${m[1]} ${m[2]} ${m[3]} »`);
-    else meta = { raw: metaRaw, date: `${m[1]} ${m[2]} ${m[3]}`, iso, person: m[4] ?? '' };
+    else meta = { raw: metaRaw, date: `${m[1]} ${m[2]} ${m[3]}`, iso, person: m[4] ?? '', forLine: coverFor, objective: coverObjective };
   }
   if (blocks.length === 0) err(1, 'aucun bloc ##');
 

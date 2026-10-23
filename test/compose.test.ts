@@ -8,7 +8,7 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
 // Frozen fingerprint of the reference restitution composed with VAUBAN_CHARTE. It changes when a
 // composition, the profile or a copied DS sheet changes: update it on purpose, after looking at the render.
-const REFERENCE_FINGERPRINT = 'ff48faf60a1ae5fc8705e2317fc4c0e925afb418c07bb071d9de3a34bf2af44f';
+const REFERENCE_FINGERPRINT = '1960068ab9a0d3a9dc5b4ce37d0e446cad8422e966d5183503d2236a54cf57bd';
 
 describe('reference composition', () => {
   const doc = parseOk(fixture('reference.md'));
@@ -80,6 +80,27 @@ describe('reference composition', () => {
   });
 });
 
+describe('synthesis page and figures as text', () => {
+  const html = composeParts(parseOk(fixture('synthese.md')), VAUBAN_CHARTE).html;
+  it('puts the sections on one page, each an intertitre and its text, then the filleted conclusion', () => {
+    const page = html.split('<article').find((a) => a.includes('aria-label="Ce que vous m&#39;avez dit"') || a.includes("aria-label=\"Ce que vous m'avez dit\"") || a.includes('Ce que vous avez déroulé'))!;
+    expect(page.match(/<section class="va-reading-section">/g)).toHaveLength(3);
+    expect(page).toContain('<header class="vd-subheading"><div><h3>Ce qui coince</h3></div></header>');
+    expect(page).not.toContain('vd-subheading-number');
+    expect(page.indexOf('va-reading-section')).toBeLessThan(page.indexOf('class="va-takeaway"'));
+  });
+  it('writes each figure as one line at the chapeau size, number in the accent, no tile', () => {
+    expect(html).toContain('<p class="va-intro">« <strong class="vr-figure-number">Trois jours</strong> perdus » sur les validations client.</p>');
+    expect(html).not.toContain('vd-figure');
+  });
+  it('has no pictogram in the flows', () => {
+    const ref = composeParts(parseOk(fixture('reference.md')), VAUBAN_CHARTE).html;
+    const flows = ref.match(/<ol class="vd-journey">[\s\S]*?<\/ol>/g) ?? [];
+    expect(flows.length).toBe(2);
+    for (const f of flows) expect(f).not.toContain('<svg');
+  });
+});
+
 describe('the other genres', () => {
   const html = compose(parseOk(fixture('genres.md')), VAUBAN_CHARTE);
   it('draws a timeline with the DS timeline', () => {
@@ -87,12 +108,12 @@ describe('the other genres', () => {
     expect(html).toContain('<time>mars 2026</time>');
   });
   it('composes tables with vd-table and the before/after with decisions.css', () => {
-    expect(html).toContain('<div class="vd-table">');
+    expect(html).toContain('<div class="vd-table" data-variant="reading">');
     expect(html).toContain('<div class="vd-comparison">');
-    expect(html).toContain('<th scope="row">Airtable</th>');
+    expect(html).toContain('<th data-slot="table-head" scope="row">Airtable</th>');
   });
   it('composes figures in their sentence', () => {
-    expect(html).toContain('<span class="vd-figure-value">Quatre heures</span>');
+    expect(html).toContain('<strong class="vr-figure-number">Quatre heures</strong>');
   });
 });
 

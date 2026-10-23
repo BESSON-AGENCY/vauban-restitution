@@ -10,7 +10,8 @@ interface Page {
   heading: string | null;
   label: string | null;
   surface: 'nuit' | null;
-  body: string[];
+  /** Paragraphs are merged into one DS text block when they follow each other. */
+  body: ({ p: string } | { html: string } | { sub: string; number: string | null })[];
   take: string | null;
   reading: string[] | null;
   fresh: boolean;
@@ -50,10 +51,8 @@ function logoParts(charte: Charte): { viewBox: string; label: string; inner: str
   return { viewBox, label: /\baria-label="([^"]*)"/.exec(m[1]!)?.[1] ?? charte.name, inner: m[2]! };
 }
 
-function renderItem(item: Item, blockKind: Parameters<typeof b.table>[0], first: boolean): string {
+function renderItem(item: Item, blockKind: Parameters<typeof b.table>[0], blockTitle: string): string {
   switch (item.kind) {
-    case 'p':
-      return b.paragraph(item.text, first);
     case 'quote':
       return b.pullquote(item.text);
     case 'figures':
@@ -63,12 +62,52 @@ function renderItem(item: Item, blockKind: Parameters<typeof b.table>[0], first:
     case 'flow':
       return b.flow(item.steps);
     case 'table':
-      return b.table(blockKind, item.table);
+      return b.table(blockKind, item.table, blockTitle);
     case 'list':
       return b.resteList(item.items);
     default:
       return '';
   }
+}
+
+/**
+ * The body of a page in DS order: the chapeau (va-intro) right after the page title, then consecutive
+ * paragraphs in one vd-text; on a case page the intertitre and its first paragraphs make a reading section.
+ */
+function pageBody(p: Page): string {
+  const out: string[] = [];
+  let run: string[] = [];
+  const flush = () => {
+    if (run.length) out.push(b.paragraphs(run));
+    run = [];
+  };
+  let first = p.heading !== null;
+  // The section being built: an intertitre and the paragraphs that follow it.
+  let section: string | null = null;
+  const closeSection = () => {
+    if (section === null) return;
+    out.push(b.readingSection(section, run.length ? b.paragraphs(run) : ''));
+    run = [];
+    section = null;
+  };
+  for (const part of p.body) {
+    if ('sub' in part) {
+      closeSection();
+      flush();
+      section = b.subheading(part.number, part.sub);
+    } else if ('p' in part) {
+      if (first) out.push(b.intro(part.p));
+      else run.push(part.p);
+    } else {
+      if (section !== null) closeSection();
+      else flush();
+      out.push(part.html);
+    }
+    first = false;
+  }
+  if (section !== null) closeSection();
+  else flush();
+  return out.join('');
 }
 
 /** Composes the typed document with a charte. The compositions read only the charte and the DS classes. */
@@ -99,45 +138,54 @@ export function composeParts(doc: RestitutionDocument, charte: Charte): Composed
           if (item.kind === 'p') pg.reading.push(item.text);
           continue;
         }
-        pg.body.push(renderItem(item, block.kind, pg.fresh && item.kind === 'p'));
-        pg.fresh = false;
+        if (item.kind === 'p') pg.body.push({ p: item.text });
+        else pg.body.push({ html: renderItem(item, block.kind, block.title) });
       }
     };
     feed(block.items);
     block.cases.forEach((c, k) => {
-      newPage(null, null, c.title);
-      pg.body.push(
-        `<div class="vd-subheading"><span class="vd-subheading-number">${pad2(k + 1)}</span><h3>${esc(c.title)}</h3></div>`,
-      );
+      // A case has its own page; a section of a recit stays on the page of its part.
+      if (block.kind === 'cas') newPage(null, null, c.title);
+      pg.body.push({ sub: c.title, number: block.kind === 'cas' ? pad2(k + 1) : null });
       feed(c.items);
     });
   }
 
   const total = pages.length + 1;
   const T = esc(doc.title);
-  const brand = `<svg class="vd-brand" viewBox="${esc(logo.viewBox)}" role="img" aria-label="${esc(logo.label)}"><use href="#vr-logo"/></svg>`;
-  const cover =
-    `<article class="vd-document va-page" data-format="a4" aria-label="${T}"><div class="va-cover"><h1>${T}</h1>` +
-    `<div class="va-cover-art" aria-hidden="true">${charte.motif}</div><p class="va-cover-meta">` +
-    `<time datetime="${doc.meta.iso}">${esc(doc.meta.date)}</time>${doc.meta.person ? `<span>${esc(doc.meta.person)}</span>` : ''}</p></div></article>`;
+  const brand = (id: string) =>
+    `<svg class="vd-brand" viewBox="${esc(logo.viewBox)}" role="img" aria-label="${esc(logo.label)}"><use href="#${id}"/></svg>`;
+  /** The DS A4 page: signature header, content, numbered footer. The cover has the same chrome. */
+  const frame = (n: number, label: string, surface: string | null, content: string) =>
+    `<article class="vd-document va-page" data-format="a4"${surface ? ` data-surface="${surface}"` : ''} aria-label="${esc(label)}">` +
+    `<header class="va-page-header">${brand(surface === 'nuit' ? 'vr-logo-inverse' : 'vr-logo')}<span>${T}</span></header>` +
+    `<div class="va-page-content"><div class="va-composition">${content}</div></div>` +
+    `<footer class="va-page-footer"><span>${esc(doc.meta.raw)}</span><span>${pad2(n)} / ${pad2(total)}</span></footer></article>`;
+  const cover = frame(
+    1,
+    doc.title,
+    null,
+    `<div class="va-cover">${doc.meta.forLine ? `<p class="va-cover-for">Pour ${esc(doc.meta.forLine)}</p>` : ''}<h2>${T}</h2>` +
+      `${doc.meta.objective ? `<p class="va-cover-subtitle">${inline(doc.meta.objective)}</p>` : ''}<div class="va-cover-art" aria-hidden="true">${charte.motif}</div><p class="va-cover-meta">` +
+      `<time datetime="${doc.meta.iso}">${esc(doc.meta.date)}</time>${doc.meta.person ? `<span>${esc(doc.meta.person)}</span>` : ''}</p></div>`,
+  );
   const arts = pages.map((p, idx) => {
-    const n = idx + 2;
     let body = p.heading ? `<header class="vd-heading"><h2>${inline(p.heading)}</h2></header>` : '';
-    body += p.body.join('');
+    body += pageBody(p);
     if (p.reading !== null) body += b.reading(p.reading);
     if (p.take) body += b.takeaway(p.take);
-    const surface = p.surface ? ` data-surface="${p.surface}"` : '';
-    return (
-      `<article class="vd-document va-page" data-format="a4"${surface} aria-label="${esc(p.label ?? `Page ${n}`)}">` +
-      `<header class="va-page-header">${brand}<span>${T}</span></header>` +
-      `<div class="va-page-content"><div class="va-composition">${body}</div></div>` +
-      `<footer class="va-page-footer"><span>${esc(doc.meta.raw)}</span><span>${pad2(n)} / ${pad2(total)}</span></footer></article>`
-    );
+    return frame(idx + 2, p.label ?? `Page ${idx + 2}`, p.surface, body);
   });
 
+  const symbol = (id: string, svg: string) => {
+    const parts = logoParts({ ...charte, logo: svg });
+    return `<symbol id="${id}" viewBox="${esc(parts.viewBox)}">${parts.inner}</symbol>`;
+  };
   const html =
     '<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">' +
-    `<symbol id="vr-logo" viewBox="${esc(logo.viewBox)}">${logo.inner}</symbol></svg>` +
+    symbol('vr-logo', charte.logo) +
+    symbol('vr-logo-inverse', charte.logoInverse ?? charte.logo) +
+    '</svg>' +
     `<main class="vr-restitution">${cover}${arts.join('')}</main>`;
   const hasMermaid = html.includes('data-mermaid="');
   return {

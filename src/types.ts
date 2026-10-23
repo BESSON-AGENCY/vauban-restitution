@@ -90,6 +90,10 @@ export interface DocumentMeta {
   date: string;
   iso: string;
   person: string;
+  /** The « Pour … » line without « Pour » (« Prénom, Organisation » or « Organisation »), or ''. */
+  forLine: string;
+  /** The objective sentence of the cover, or ''. */
+  objective: string;
 }
 
 /** The typed document read from the Markdown. The Markdown stays the source of truth. */

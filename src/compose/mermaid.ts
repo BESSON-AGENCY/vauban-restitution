@@ -44,7 +44,7 @@ export function mermaidTheme(charte: Charte): Record<string, string> {
 export function mermaidBootScript(charte: Charte): string {
   const cfg = JSON.stringify({ url: MERMAID_URL, theme: mermaidTheme(charte) }).replace(/</g, '\\u003c');
   return (
-    '(function(c){var boxes=document.querySelectorAll(".vd-diagram[data-mermaid]");if(!boxes.length)return;' +
+    '(function(c){var boxes=document.querySelectorAll(".vr-diagram[data-mermaid]");if(!boxes.length)return;' +
     'var s=document.createElement("script");s.src=c.url;s.async=true;' +
     's.onload=function(){var M=window.mermaid;if(!M)return;' +
     'M.initialize({startOnLoad:false,theme:"base",securityLevel:"strict",themeVariables:c.theme});' +

@@ -13,6 +13,8 @@ describe('reference document', () => {
       date: '23 octobre 2026',
       iso: '2026-10-23',
       person: 'Martin',
+      forLine: '',
+      objective: '',
     });
   });
 
@@ -82,11 +84,14 @@ describe('every genre of the catalogue is read', () => {
 const REFUSALS: [string, string, number, string][] = [
   ['heading without genre', wrap('', '## Sans genre'), 4, 'un titre ## porte son bloc'],
   ['genre outside the catalogue', wrap('', '## Titre {inconnu}'), 4, 'hors catalogue'],
-  ['content before the first block', '# T\n23 octobre 2026 · Martin\n\nUn texte\n\n## Titre {recit}\nx\n', 4, 'tout contenu est dans un bloc'],
+  ['content before the first block', '# T\n23 octobre 2026 · Martin\n\n> « une exergue »\n\n## Titre {recit}\nx\n', 4, 'tout contenu est dans un bloc'],
+  ['four cover lines', '# T\n23 octobre 2026 · Martin\nPour Martin, Acme\nUn objectif.\nUne ligne de trop.\n\n## Titre {recit}\nx\n', 5, 'au plus trois lignes'],
+  ['two Pour lines', '# T\n23 octobre 2026 · Martin\nPour Martin, Acme\nPour Autre\n\n## Titre {recit}\nx\n', 4, 'au plus trois lignes'],
+  ['empty Pour', '# T\n23 octobre 2026 · Martin\nPour \n\n## Titre {recit}\nx\n', 3, 'dit pour qui'],
   ['reserved title with another genre', wrap('', '## Ce que je comprends de vos cas {recit}'), 4, 'titre réservé'],
   ['reserved genre with another title', wrap('Lecture de Vauban, pas vos mots.', '## Autre titre {lecture}'), 4, 'a pour titre'],
   ['structure outside the genre', wrap('| a | b |\n| --- | --- |\n| 1 | 2 |'), 5, 'n’est pas accepté dans un bloc recit'],
-  ['### outside a cas', wrap('### Un cas'), 5, 'n’existe que dans un bloc cas'],
+  ['### outside a cas or a recit', wrap('### Un cas', '## Chiffres {chiffres}'), 5, 'n’existe que dans un bloc cas ou recit'],
   ['cas without ###', wrap('', '## Cas {cas}'), 4, 'au moins un ### cas'],
   ['level 4 heading', wrap('#### Petit'), 5, 'niveau 4'],
   ['HTML', wrap('Du <b>gras</b> ici'), 5, 'HTML refusé'],
@@ -190,6 +195,49 @@ describe('figures and flows', () => {
     expect(flow('vente → [coince] → montage')).toBe(false);
     expect(flow('vente →  → montage')).toBe(false);
     expect(flow('[coince] → montage')).toBe(false);
+  });
+});
+
+describe('recit with intertitres', () => {
+  const doc = parseOk(fixture('synthese.md'));
+  it('reads ### sections inside a recit and keeps the closing line as the take', () => {
+    const recit = doc.blocks[0]!;
+    expect(recit.cases.map((c) => c.title)).toEqual(['Ce que vous avez déroulé', 'Ce qui coince', 'Ce que vous voudriez']);
+    expect(recit.cases[2]!.items.map((i) => i.kind)).toEqual(['p', 'take']);
+  });
+  it('accepts what a recit accepts in a section and refuses the rest', () => {
+    expect(parse(wrap('### Un intertitre\n> « une exergue »\n\nUn texte.')).ok).toBe(true);
+    expect(parse(wrap('### Un intertitre\nvente → montage')).ok).toBe(false);
+    expect(parse(wrap('### Un intertitre\n```mermaid\nmindmap\n  root((x))\n    a\n```')).ok).toBe(false);
+  });
+});
+
+describe('cover lines', () => {
+  const cover = (lines: string) => parseOk(`# T\n${lines}\n\n## B {recit}\nx\n`).meta;
+  it('reads Pour and the objective, each optional', () => {
+    expect(cover('23 octobre 2026 · Martin\nPour Martin, Acme\nVoir où part le temps.')).toMatchObject({
+      person: 'Martin',
+      forLine: 'Martin, Acme',
+      objective: 'Voir où part le temps.',
+    });
+    expect(cover('23 octobre 2026 · Martin\nPour Acme')).toMatchObject({ forLine: 'Acme', objective: '' });
+    expect(cover('23 octobre 2026\nVoir où part le temps.')).toMatchObject({ forLine: '', objective: 'Voir où part le temps.' });
+    expect(cover('23 octobre 2026\n\nPour Acme\n\nUn objectif.')).toMatchObject({ forLine: 'Acme', objective: 'Un objectif.' });
+    expect(cover('23 octobre 2026 · Martin')).toMatchObject({ forLine: '', objective: '' });
+  });
+  it('composes the cover like the DS one: Pour above, title, objective as subtitle, date below', async () => {
+    const { composeParts } = await import('../src/compose/index.js');
+    const { VAUBAN_CHARTE } = await import('../src/charte.js');
+    const d = parseOk('# Un titre\n23 octobre 2026 · Martin\nPour Martin, Acme\nVoir où part le temps.\n\n## B {recit}\nx\n');
+    const html = composeParts(d, VAUBAN_CHARTE).html;
+    const at = (s: string) => html.indexOf(s);
+    expect(at('<p class="va-cover-for">Pour Martin, Acme</p>')).toBeGreaterThan(0);
+    expect(at('<p class="va-cover-for">')).toBeLessThan(at('<h2>Un titre</h2>'));
+    expect(at('<h2>Un titre</h2>')).toBeLessThan(at('<p class="va-cover-subtitle">Voir où part le temps.</p>'));
+    expect(at('<p class="va-cover-subtitle">')).toBeLessThan(at('<p class="va-cover-meta">'));
+    const plain = composeParts(parseOk('# T\n23 octobre 2026 · A\n\n## B {recit}\nx\n'), VAUBAN_CHARTE).html;
+    expect(plain).not.toContain('va-cover-for');
+    expect(plain).not.toContain('va-cover-subtitle');
   });
 });
 

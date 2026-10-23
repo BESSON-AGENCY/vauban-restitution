@@ -37,7 +37,7 @@ const COMMON: readonly ItemKind[] = ['take', 'break'];
 export const CATALOGUE: Readonly<Record<BlockKind, BlockSpec>> = {
   recit: {
     kind: 'recit',
-    carries: 'un récit dans ses mots',
+    carries: 'un récit dans ses mots, avec ses intertitres (###) sur une même page',
     accepts: ['p', 'quote', 'figures', ...COMMON],
     composition: 'vd-text, vd-pullquote, vd-figure, va-takeaway',
   },
@@ -66,14 +66,14 @@ export const CATALOGUE: Readonly<Record<BlockKind, BlockSpec>> = {
     carries: 'ses sujets autour d’elle',
     accepts: ['p', 'mindmap', ...COMMON],
     requires: 'mindmap',
-    composition: 'vd-diagram',
+    composition: 'Mermaid',
   },
   journee: {
     kind: 'journee',
     carries: 'une journée type',
     accepts: ['p', 'flowchart', 'journey', ...COMMON],
     requires: 'flowchart|journey',
-    composition: 'vd-journey, vd-diagram',
+    composition: 'vd-journey, Mermaid',
   },
   'avant-apres': {
     kind: 'avant-apres',

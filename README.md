@@ -8,12 +8,12 @@ Moteur de composition des restitutions : un Markdown à grammaire fermée devien
 
 Code propriétaire (UNLICENSED), publié pour être chargé par les applications de Vauban et de ses clients : aucune réutilisation, copie ni modification sans accord écrit (voir `LICENSE`).
 
-URL CDN : `https://cdn.jsdelivr.net/npm/@vaubanhq/restitution@0.1.1/dist/browser/restitution.js` (jsdelivr sert le paquet npm). L'URL `/gh/` de jsdelivr (`https://cdn.jsdelivr.net/gh/BESSON-AGENCY/vauban-restitution@v0.1.1/dist/browser/restitution.js`) n'est pas chargeable par un artefact : le bac à sable n'accepte que `/npm/`.
+URL CDN : `https://cdn.jsdelivr.net/npm/@vaubanhq/restitution@0.1.2/dist/browser/restitution.js` (jsdelivr sert le paquet npm). L'URL `/gh/` de jsdelivr (`https://cdn.jsdelivr.net/gh/BESSON-AGENCY/vauban-restitution@v0.1.2/dist/browser/restitution.js`) n'est pas chargeable par un artefact : le bac à sable n'accepte que `/npm/`.
 
 ## Le document minimal d'un artefact
 
 ```html
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>…</title></head><body><script type="text/markdown" id="restitution">…le Markdown…</script><script src="https://cdn.jsdelivr.net/npm/@vaubanhq/restitution@0.1.1/dist/browser/restitution.js"></script></body></html>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>…</title></head><body><script type="text/markdown" id="restitution">…le Markdown…</script><script src="https://cdn.jsdelivr.net/npm/@vaubanhq/restitution@0.1.2/dist/browser/restitution.js"></script></body></html>
 ```
 
 Le chargeur lit le script `#restitution` (le Markdown peut être indenté dans la page), le lit selon la grammaire, compose avec `VAUBAN_CHARTE` (ou la charte posée dans `window.RESTITUTION_CHARTE` avant le chargeur), injecte le HTML et le CSS, charge la police (Jost, avec repli système) et, s'il y a une carte ou un parcours à dessiner, Mermaid 11.12.0 depuis cdnjs. Si le Markdown sort de la grammaire, la page affiche la liste des refus (ligne et raison) au lieu du document.
@@ -27,6 +27,8 @@ Chaque `## Titre {genre}` ouvre une partie, donc une page. Le genre vient d'un c
 ````
 # Titre du document
 23 octobre 2026 · Prénom
+Pour Prénom, Organisation          (facultatif)
+Une phrase d'objectif.             (facultatif)
 
 ## Ce que vous m'avez dit {recit}
 Un paragraphe (le premier est le chapeau). **gras** et *italique* seulement.
@@ -50,7 +52,7 @@ flowchart TB
 
 | Genre | Porte | Composition |
 |---|---|---|
-| `recit` | un récit, des exergues, des chiffres | `vd-text`, `vd-pullquote`, `vd-figure` |
+| `recit` | un récit, des exergues, des chiffres, des `###` intertitres sur la même page (synthèse) | `vd-text`, `vd-pullquote`, `vd-figure` |
 | `cas` | des cas déroulés (`###`), schéma ou ligne `→` | `vd-subheading`, `vd-journey`, `vd-timeline` |
 | `chiffres` | des chiffres, chacun dans sa phrase | `vd-figure-group` |
 | `frise` | des épisodes datés (`timeline`) | `vd-timeline` |
@@ -60,6 +62,8 @@ flowchart TB
 | `tableau` | un tableau à colonnes | `vd-table` |
 | `lecture` | `## Ce que je comprends de vos cas {lecture}`, ouvert par `Lecture de Vauban, pas vos mots.` | `vd-callout` |
 | `reste` | `## Ce que nous n'avons pas abordé {reste}`, liste de `- « … »` | `vd-next-steps` sur fond nuit |
+
+Un chiffre dit se lit comme du texte : la ligne entière à la taille du chapeau, le nombre en bleu. L'exergue est à 24 px.
 
 Les flowcharts (déroulés) et les timelines (frises) sont dessinés par le moteur, sans Mermaid : une étape par ligne, l'étape qui coince porte la marque d'étape du design system. Seules la carte et le parcours passent par Mermaid ; sans lui, leur texte de secours reste affiché.
 
@@ -94,7 +98,7 @@ Aucune valeur de charte n'est écrite dans les compositions ni dans le CSS : tou
 
 ## Le CSS
 
-`src/css/` contient des **copies fidèles** des feuilles du design system (`tokens.css`, `tokens-print.css`, `components.css`, `editorial.css`, `pages.css`, `decisions.css`) et `profile.css`, le profil de la restitution (règles A4 de la maquette, qui n'existent pas encore dans le design system ; à y remonter). `scripts/build-css.mjs` élague les feuilles aux classes que les compositions emploient et les minifie dans `src/css.generated.ts`.
+`src/css/` contient des **copies fidèles** des feuilles du design system (`tokens.css`, `tokens-print.css`, `components.css`, `editorial.css`, `pages.css`, `decisions.css`) et `engine.css`, les quelques règles dont le moteur a besoin et que le design system n'a pas (voir `AUDIT-DS.md`). `scripts/build-css.mjs` élague les feuilles aux classes que les compositions emploient et les minifie dans `src/css.generated.ts`.
 
 `npm run parity` compare `test/fixtures/parity/` (corpus partagé avec MIROIR : même verdict des deux analyseurs pour chaque fichier) au dossier de MIROIR (chemin en argument ou `MIROIR_PARITY_DIR`).
 

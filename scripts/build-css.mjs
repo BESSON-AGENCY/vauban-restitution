@@ -1,5 +1,5 @@
 // Builds src/css.generated.ts (the documentary CSS of the design system, pruned to the classes the
-// compositions use, minified) and src/css.restitution.ts (the restitution profile, ours).
+// compositions use, minified) and src/css.restitution.ts (the engine rules, ours).
 // The DS copies in src/css/ stay verbatim: scripts/check-ds-drift.mjs compares them to the DS repository.
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -7,17 +7,23 @@ import { fileURLToPath } from 'node:url';
 import postcss from 'postcss';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const DS_FILES = ['tokens-print.css', 'components.css', 'editorial.css', 'pages.css', 'decisions.css'];
+// pages.css imports scenes.css first (the night surface lives there): same order here.
+const DS_FILES = ['tokens-print.css', 'components.css', 'editorial.css', 'scenes.css', 'pages.css', 'decisions.css'];
 
 // Classes the compositions emit: every vd-/va-/vr- token written in src/compose.
 const used = new Set();
-for (const f of readdirSync(join(root, 'src/compose'))) {
-  const text = readFileSync(join(root, 'src/compose', f), 'utf8');
+const sources = [
+  ...readdirSync(join(root, 'src/compose')).map((f) => join(root, 'src/compose', f)),
+  join(root, 'src/charte.ts'), // the cover motif carries DS classes (vd-motif-fill)
+];
+for (const file of sources) {
+  const text = readFileSync(file, 'utf8');
   for (const m of text.matchAll(/\b(?:vd|va|vr)-[a-z0-9-]+/g)) used.add(m[0]);
 }
 
 const classesOf = (selector) => [...selector.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)].map((m) => m[1]);
-const keeps = (selector) => classesOf(selector).every((c) => used.has(c));
+// The engine never sets data-tone: the monochrome rules (with their own greys) are left out.
+const keeps = (selector) => !/data-tone/.test(selector) && classesOf(selector).every((c) => used.has(c));
 
 function prune(css) {
   const ast = postcss.parse(css);
@@ -68,16 +74,8 @@ function minify(css, doPrune) {
 
 const ds = DS_FILES.map((f) => minify(readFileSync(join(root, 'src/css', f), 'utf8'), true)).join('');
 
-// The restitution profile (ours): every rule scoped under .vr-restitution so that it wins over the DS rules.
-function scoped(css) {
-  const ast = postcss.parse(css);
-  ast.walkRules((rule) => {
-    if (rule.parent?.type === 'atrule' && /keyframes$/.test(rule.parent.name)) return;
-    rule.selectors = rule.selectors.map((s) => (/^(body|:root|html)\b/.test(s) ? s : `.vr-restitution ${s}`));
-  });
-  return ast;
-}
-const profileAst = scoped(readFileSync(join(root, 'src/css/profile.css'), 'utf8'));
+// The engine rules (ours): few, specific, not scoped.
+const profileAst = postcss.parse(readFileSync(join(root, 'src/css/engine.css'), 'utf8'));
 profileAst.walkComments((c) => c.remove());
 const own = emit(profileAst);
 

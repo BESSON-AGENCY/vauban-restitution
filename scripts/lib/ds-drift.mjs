@@ -14,6 +14,7 @@ export const COPIED_CSS = [
   ['tokens-print.css', 'design-system/documents/tokens-print.css'],
   ['components.css', 'design-system/documents/components.css'],
   ['editorial.css', 'design-system/documents/editorial.css'],
+  ['scenes.css', 'design-system/documents/scenes.css'],
   ['pages.css', 'design-system/documents/pages.css'],
   ['decisions.css', 'design-system/documents/decisions.css'],
 ];

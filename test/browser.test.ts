@@ -54,7 +54,7 @@ describe('browser bundle', () => {
 
   it('keeps the fallback text of a schema that is not drawn', () => {
     const { document } = page(fixture('reference.md'));
-    expect(document.querySelector('.vd-diagram[data-mermaid] .vd-diagram-fallback')!.textContent).toContain('Vos cas');
+    expect(document.querySelector('.vr-diagram[data-mermaid] .vr-diagram-fallback')!.textContent).toContain('Vos cas');
   });
 
   it('accepts a Markdown indented inside the page', () => {
