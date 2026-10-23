@@ -126,6 +126,8 @@ const REFUSALS: [string, string, number, string][] = [
   ['day 32', '# A\n32 octobre 2026 · Martin\n\n## T {recit}\nx\n', 2, 'date illisible'],
   ['table with a header and a separator only', wrap('| a | b |\n| --- | --- |', '## T {tableau}'), 5, 'au moins une ligne'],
   ['table separator with fewer columns', wrap('| a | b |\n| --- |\n| 1 | 2 |', '## T {tableau}'), 5, 'autant de colonnes'],
+  ['HTML in a mermaid block', wrap('```mermaid\nflowchart TB\n  A["x<img src=y>"]\n```', '## J {journee}'), 7, 'HTML refusé dans un bloc mermaid'],
+  ['directive in a mermaid block', wrap('```mermaid\n%%{init: {"securityLevel": "loose"}}%%\nflowchart TB\n  A["x"]\n```', '## J {journee}'), 6, 'directive Mermaid'],
   ['unknown month', '# A\n23 octobrr 2026 · Martin\n\n## T {recit}\nx\n', 2, 'date illisible'],
   ['no title', '## T {recit}\nx\n', 1, 'commence par # Titre'],
   ['flowchart with another direction', wrap('```mermaid\nflowchart RL\n A["x"]\n```', '## J {journee}'), 5, 'flowchart TB'],
@@ -209,6 +211,15 @@ describe('recit with intertitres', () => {
     expect(parse(wrap('### Un intertitre\n> « une exergue »\n\nUn texte.')).ok).toBe(true);
     expect(parse(wrap('### Un intertitre\nvente → montage')).ok).toBe(false);
     expect(parse(wrap('### Un intertitre\n```mermaid\nmindmap\n  root((x))\n    a\n```')).ok).toBe(false);
+  });
+});
+
+describe('mermaid blocks', () => {
+  it('keep <br/> in a label and refuse any other <', () => {
+    expect(parse(wrap('```mermaid\nflowchart TB\n  A["a<br/>b"]\n```', '## J {journee}')).ok).toBe(true);
+    expect(parse(wrap('```mermaid\nflowchart TB\n  A["a<br>b"]\n```', '## J {journee}')).ok).toBe(true);
+    expect(parse(wrap('```mermaid\nflowchart TB\n  A["a<b>b"]\n```', '## J {journee}')).ok).toBe(false);
+    expect(parse(wrap('```mermaid\nflowchart TB\n  A["a<script>"]\n```', '## J {journee}')).ok).toBe(false);
   });
 });
 

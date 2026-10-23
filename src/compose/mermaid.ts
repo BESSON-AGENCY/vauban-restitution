@@ -2,6 +2,11 @@ import type { Charte } from '../charte.js';
 
 export const MERMAID_VERSION = '11.12.0';
 export const MERMAID_URL = `https://cdnjs.cloudflare.com/ajax/libs/mermaid/${MERMAID_VERSION}/mermaid.min.js`;
+/**
+ * Subresource integrity of the exact file above. Computed by scripts/sri.mjs (sha384 of the downloaded
+ * file; the sha512 matches the one cdnjs publishes) and recomputed by test/sri.test.ts.
+ */
+export const MERMAID_INTEGRITY = 'sha384-o+g/BxPwhi0C3RK7oQBxQuNimeafQ3GE/ST4iT2BxVI4Wzt60SH4pq9iXVYujjaS';
 
 /** Mermaid theme variables, all taken from the charte tokens. */
 export function mermaidTheme(charte: Charte): Record<string, string> {
@@ -42,10 +47,10 @@ export function mermaidTheme(charte: Charte): Record<string, string> {
  * Plain ES5 text: it is inlined as is in a full page, and injected by the browser loader.
  */
 export function mermaidBootScript(charte: Charte): string {
-  const cfg = JSON.stringify({ url: MERMAID_URL, theme: mermaidTheme(charte) }).replace(/</g, '\\u003c');
+  const cfg = JSON.stringify({ url: MERMAID_URL, integrity: MERMAID_INTEGRITY, theme: mermaidTheme(charte) }).replace(/</g, '\\u003c');
   return (
     '(function(c){var boxes=document.querySelectorAll(".vr-diagram[data-mermaid]");if(!boxes.length)return;' +
-    'var s=document.createElement("script");s.src=c.url;s.async=true;' +
+    'var s=document.createElement("script");s.integrity=c.integrity;s.crossOrigin="anonymous";s.src=c.url;s.async=true;' +
     's.onload=function(){var M=window.mermaid;if(!M)return;' +
     'M.initialize({startOnLoad:false,theme:"base",securityLevel:"strict",themeVariables:c.theme});' +
     '(document.fonts?document.fonts.ready:Promise.resolve()).then(function(){' +

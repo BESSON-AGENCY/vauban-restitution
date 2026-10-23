@@ -442,6 +442,23 @@ export function parse(markdown: string): ParseResult {
         continue;
       }
       const code = raw.slice(i + 1, j);
+      // Defence in depth beyond securityLevel strict: no HTML (only the <br/> line break of a label) and
+      // no %%{ directive (which can reconfigure Mermaid) in a diagram.
+      let unsafe = false;
+      code.forEach((cl, k) => {
+        if (/<(?!br\s*\/?>)/i.test(cl)) {
+          err(i + 2 + k, 'HTML refusé dans un bloc mermaid (seul <br/> est accepté dans un libellé)');
+          unsafe = true;
+        }
+        if (cl.includes('%%{')) {
+          err(i + 2 + k, 'directive Mermaid %%{ refusée');
+          unsafe = true;
+        }
+      });
+      if (unsafe) {
+        i = j + 1;
+        continue;
+      }
       const first = (code.find((c) => c.trim()) ?? '').trim().split(/\s+/)[0] ?? '';
       const body = code;
       const e = (msg: string) => err(n, msg);
