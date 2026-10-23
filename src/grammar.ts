@@ -41,7 +41,7 @@ const MONTHS: Record<string, number> = {
 const HEAD = /^## (.+?) \{([a-z-]+)\}\s*$/;
 const FIG = /^- « (.*?)\*\*(.+?)\*\*(.*?) »\s*(.*)$/;
 const RESTE_ITEM = /^- (« .+ »)(?: \((« .+ »)\))?$/;
-const META = /^(\d{1,2}) (\S+) (\d{4}) · (\S.*)$/;
+const META = /^(\d{1,2}(?:er)?) (\S+) (\d{4}) · (\S.*)$/;
 
 const LABELS: Record<ItemKind, string> = {
   p: 'un paragraphe',
@@ -469,6 +469,22 @@ export function parse(markdown: string): ParseResult {
       }
       continue;
     }
+    // A line that looks like a structure but is not one (no space after > or #, text after ---):
+    // refused, and the loop always moves on by at least this line.
+    if (/^(#|>|---|-$)/.test(l)) {
+      err(
+        n,
+        l.startsWith('>')
+          ? 'une exergue s’écrit > « … » (un espace après >)'
+          : l.startsWith('#')
+            ? 'un titre s’écrit # Titre, ## Titre {bloc} ou ### Titre (un espace après les #)'
+            : l.startsWith('---')
+              ? 'un saut de page est --- seul sur sa ligne'
+              : 'une liste s’écrit - « … » (un espace après -)',
+      );
+      i++;
+      continue;
+    }
     const p: string[] = [];
     while (i < raw.length && raw[i]!.trim() && !/^(#|>|- |---|```|\|)/.test(raw[i]!)) {
       p.push(raw[i]!.trim());
@@ -489,7 +505,7 @@ export function parse(markdown: string): ParseResult {
   let meta: RestitutionDocument['meta'] | null = null;
   if (title !== null) {
     const m = META.exec(metaRaw);
-    const iso = m ? isoDate(Number(m[1]), m[2]!, Number(m[3])) : null;
+    const iso = m ? isoDate(parseInt(m[1]!, 10), m[2]!, Number(m[3])) : null;
     if (!m) err(metaLine || 2, 'la ligne qui suit # doit être « date · prénom » (ex. 23 octobre 2026 · Martin)');
     else if (!iso) err(metaLine, `date illisible : « ${m[1]} ${m[2]} ${m[3]} »`);
     else meta = { raw: metaRaw, date: `${m[1]} ${m[2]} ${m[3]}`, iso, person: m[4]! };

@@ -111,6 +111,15 @@ const REFUSALS: [string, string, number, string][] = [
   ],
   ['second title', '# A\n23 octobre 2026 · Martin\n\n# B\n', 4, 'un seul titre #'],
   ['bad meta line', '# A\nle 23 octobre\n\n## T {recit}\nx\n', 2, 'date · prénom'],
+  ['quote without space after >', wrap('>« un »'), 5, 'un espace après >'],
+  ['lone >', wrap('>'), 5, 'un espace après >'],
+  ['--- followed by text', wrap('---x'), 5, 'seul sur sa ligne'],
+  ['# without space', wrap('#x'), 5, 'un espace après les #'],
+  ['lone -', wrap('-'), 5, 'un espace après -'],
+  ['day 0', '# A\n0 octobre 2026 · Martin\n\n## T {recit}\nx\n', 2, 'date illisible'],
+  ['day 32', '# A\n32 octobre 2026 · Martin\n\n## T {recit}\nx\n', 2, 'date illisible'],
+  ['table with a header and a separator only', wrap('| a | b |\n| --- | --- |', '## T {tableau}'), 5, 'au moins une ligne'],
+  ['table separator with fewer columns', wrap('| a | b |\n| --- |\n| 1 | 2 |', '## T {tableau}'), 5, 'autant de colonnes'],
   ['unknown month', '# A\n23 octobrr 2026 · Martin\n\n## T {recit}\nx\n', 2, 'date illisible'],
   ['no title', '## T {recit}\nx\n', 1, 'commence par # Titre'],
   ['flowchart with another direction', wrap('```mermaid\nflowchart RL\n A["x"]\n```', '## J {journee}'), 5, 'flowchart TB'],
@@ -122,6 +131,13 @@ const REFUSALS: [string, string, number, string][] = [
   ['table without separator', wrap('| a | b |\n| 1 | 2 |\n| 3 | 4 |', '## T {tableau}'), 5, 'séparation'],
   ['mindmap alone before the first ### of a cas', wrap('Un texte.\n### Un cas\nx', '## Cas {cas}'), 5, 'seule une mindmap'],
 ];
+
+describe('cover date', () => {
+  it('accepts the first of the month written 1er', () => {
+    const d = parseOk('# A\n1er novembre 2026 · Martin\n\n## T {recit}\nx\n');
+    expect(d.meta).toMatchObject({ date: '1er novembre 2026', iso: '2026-11-01', person: 'Martin' });
+  });
+});
 
 describe('refusals name the line and the reason', () => {
   it.each(REFUSALS)('%s', (_name, markdown, line, fragment) => {
