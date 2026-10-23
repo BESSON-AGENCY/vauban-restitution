@@ -37,7 +37,8 @@
     "drift": "node scripts/check-ds-drift.mjs",
     "check": "npm run typecheck && npm run lint && npm run drift",
     "example": "node scripts/example.mjs",
-    "captures": "sh scripts/captures.sh"
+    "captures": "sh scripts/captures.sh",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

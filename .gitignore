@@ -1,3 +1,7 @@
 node_modules/
-dist/
+dist/*
+!dist/browser/
+dist/browser/*
+!dist/browser/restitution.js
 .DS_Store
+*.tgz

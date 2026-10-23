@@ -7,6 +7,14 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+const sha = (() => {
+  try {
+    return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root }).toString().trim();
+  } catch {
+    return 'unknown';
+  }
+})();
 const run = (cmd, args) => execFileSync(cmd, args, { cwd: root, stdio: 'inherit' });
 
 run('node', ['scripts/build-css.mjs']);
@@ -29,6 +37,7 @@ await build({
   target: 'es2019',
   minify: true,
   legalComments: 'none',
+  banner: { js: `/* @vauban/restitution ${version}, construit depuis ${sha} */` },
 });
 run('npx', ['tsc', '-p', 'tsconfig.build.json']);
 
