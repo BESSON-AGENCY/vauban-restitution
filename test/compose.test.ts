@@ -8,7 +8,7 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
 // Frozen fingerprint of the reference restitution composed with VAUBAN_CHARTE. It changes when a
 // composition, the profile or a copied DS sheet changes: update it on purpose, after looking at the render.
-const REFERENCE_FINGERPRINT = '6f9b3ff392b598161ffb0d43dad469a73c1db7b73fe508e059f0ef300da6cb2b';
+const REFERENCE_FINGERPRINT = '889f2d99b6e327ba81ba9a82ae0b3f7cd0831aaecdf4456db7f6a7c2bfc23d49';
 
 describe('reference composition', () => {
   const doc = parseOk(fixture('reference.md'));
@@ -47,6 +47,15 @@ describe('reference composition', () => {
     expect(c.html).not.toMatch(/amber|#845200/);
   });
 
+  it('ships a boot script that is plain ES5 and keeps a diagram inside its A4 page', () => {
+    const script = composeParts(doc, VAUBAN_CHARTE).mermaidScript!;
+    expect(() => new Function(script)).not.toThrow();
+    expect(script).not.toMatch(/=>|\blet\b|\bconst\b|`|\?\./);
+    // body size of the design system and the smallest text a diagram may keep before it gets a page of its own
+    expect(script).toContain('"body":16,"min":11');
+    expect(script).toContain('.va-page');
+  });
+
   it('keeps the schemas for Mermaid, with a text fallback, and loads Mermaid 11.12.0 only then', () => {
     const c = composeParts(doc, VAUBAN_CHARTE);
     expect(c.html).toContain('<pre class="mermaid" hidden>');
@@ -67,7 +76,7 @@ describe('reference composition', () => {
   });
 
   it('marks the reading as Vauban, not the person', () => {
-    expect(html).toContain('<h3>Lecture de Vauban, pas vos mots.</h3>');
+    expect(html).toContain('<h3>Ma lecture, pas vos mots.</h3>');
     expect(html).toContain('data-variant="lecture"');
   });
 
@@ -177,7 +186,7 @@ const FAKE: Charte = {
 };
 
 describe('the charte is data', () => {
-  // The reserved mark « Lecture de Vauban » belongs to the grammar, so the reading block is left out here.
+  // The reserved opening line of the reading block belongs to the grammar, so the reading block is left out here.
   const source = fixture('reference.md').replace(/## Ce que je comprends de vos cas \{lecture\}[\s\S]*?(?=## Ce que nous)/, '');
   const doc = parseOk(source);
   const withFake = compose(doc, FAKE);

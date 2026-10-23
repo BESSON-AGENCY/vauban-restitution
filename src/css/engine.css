@@ -17,6 +17,8 @@ body{margin:0;padding:32px 0;background:var(--ds-mist)}
 .vr-diagram[data-mermaid] pre{display:none}
 .vr-diagram{display:flex;flex-direction:column;align-items:center;min-width:0;break-inside:avoid}
 .vr-diagram svg{max-width:100%;height:auto}
+/* Mermaid measures a label about 1% narrower than the browser draws it: let the last letters show instead of being cut. */
+.vr-diagram svg foreignObject{overflow:visible}
 .vr-diagram-fallback{font-size:var(--vd-small);color:var(--vd-muted);align-self:stretch}
 
 /* 5. Table headings: the DS gets their left alignment from Tailwind classes that the engine does not carry. */

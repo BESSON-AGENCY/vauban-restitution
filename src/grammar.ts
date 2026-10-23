@@ -4,6 +4,7 @@ import {
   CATALOGUE,
   CLOSING_TITLE,
   READING_MARK,
+  READING_MARKS,
   READING_TITLE,
   type ItemKind,
 } from './catalogue.js';
@@ -575,7 +576,7 @@ export function parse(markdown: string): ParseResult {
     if (b.kind === 'cas' && b.cases.length === 0) err(b.line, 'un bloc cas contient au moins un ### cas');
     if (b.kind === 'lecture') {
       const ps = b.items.filter((x): x is Extract<Item, { kind: 'p' }> => x.kind === 'p');
-      if (ps.length === 0 || ps[0]!.text !== READING_MARK)
+      if (ps.length === 0 || !READING_MARKS.includes(ps[0]!.text))
         err(b.line, `la lecture s’ouvre par « ${READING_MARK} »`);
       for (const p of ps.slice(1)) {
         if (!p.text.includes('«')) err(p.line, 'chaque point de la lecture contient une citation « … »');

@@ -30,7 +30,12 @@ export interface BlockSpec {
 
 export const READING_TITLE = 'Ce que je comprends de vos cas';
 export const CLOSING_TITLE = "Ce que nous n'avons pas abordé";
-export const READING_MARK = 'Lecture de Vauban, pas vos mots.';
+/** The line that opens the reading block: the interlocutor speaks in the first person since 0.2.0. */
+export const READING_MARK = 'Ma lecture, pas vos mots.';
+/** The line written before 0.2.0. Restitutions already written carry it: it stays accepted and is shown as written. */
+export const LEGACY_READING_MARK = 'Lecture de Vauban, pas vos mots.';
+/** Every opening line the grammar accepts for the reading block. */
+export const READING_MARKS: readonly string[] = [READING_MARK, LEGACY_READING_MARK];
 
 const COMMON: readonly ItemKind[] = ['take', 'break'];
 

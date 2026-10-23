@@ -39,7 +39,7 @@ describe('browser bundle', () => {
     expect(document.querySelector('style')!.textContent).toContain('--ds-blue:#0755ff');
     expect(document.querySelector('link[rel=stylesheet]')!.getAttribute('href')).toContain('fonts.googleapis.com');
     expect(document.querySelector('.vd-callout[data-variant=lecture] h3')!.textContent).toBe(
-      'Lecture de Vauban, pas vos mots.',
+      'Ma lecture, pas vos mots.',
     );
   });
 
