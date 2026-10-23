@@ -119,7 +119,7 @@ export function composeParts(doc: RestitutionDocument, charte: Charte): Composed
   const cover =
     `<article class="vd-document va-page" data-format="a4" aria-label="${T}"><div class="va-cover"><h1>${T}</h1>` +
     `<div class="va-cover-art" aria-hidden="true">${charte.motif}</div><p class="va-cover-meta">` +
-    `<time datetime="${doc.meta.iso}">${esc(doc.meta.date)}</time><span>${esc(doc.meta.person)}</span></p></div></article>`;
+    `<time datetime="${doc.meta.iso}">${esc(doc.meta.date)}</time>${doc.meta.person ? `<span>${esc(doc.meta.person)}</span>` : ''}</p></div></article>`;
   const arts = pages.map((p, idx) => {
     const n = idx + 2;
     let body = p.heading ? `<header class="vd-heading"><h2>${inline(p.heading)}</h2></header>` : '';

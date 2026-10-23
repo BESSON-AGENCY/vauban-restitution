@@ -1,5 +1,5 @@
 {
-  "name": "@vauban/restitution",
+  "name": "@vaubanhq/restitution",
   "version": "0.1.1",
   "description": "Closed-grammar Markdown to A4 restitution document: parser, compositions, charte, and a self-contained browser loader.",
   "type": "module",
@@ -35,6 +35,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "node scripts/lint.mjs",
     "drift": "node scripts/check-ds-drift.mjs",
+    "parity": "node scripts/check-parity.mjs",
     "check": "npm run typecheck && npm run lint && npm run drift",
     "example": "node scripts/example.mjs",
     "captures": "sh scripts/captures.sh",

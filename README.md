@@ -1,4 +1,4 @@
-# @vauban/restitution
+# @vaubanhq/restitution
 
 Moteur de composition des restitutions : un Markdown à grammaire fermée devient un document A4 mis en page avec le design system. Trois usages, un seul code :
 
@@ -8,12 +8,12 @@ Moteur de composition des restitutions : un Markdown à grammaire fermée devien
 
 Code propriétaire (UNLICENSED), publié pour être chargé par les applications de Vauban et de ses clients : aucune réutilisation, copie ni modification sans accord écrit (voir `LICENSE`).
 
-URL CDN : `https://cdn.jsdelivr.net/npm/@vauban/restitution@0.1.1/dist/browser/restitution.js` (jsdelivr sert le paquet npm). L'URL `/gh/` de jsdelivr (`https://cdn.jsdelivr.net/gh/BESSON-AGENCY/vauban-restitution@v0.1.1/dist/browser/restitution.js`) n'est pas chargeable par un artefact : le bac à sable n'accepte que `/npm/`.
+URL CDN : `https://cdn.jsdelivr.net/npm/@vaubanhq/restitution@0.1.1/dist/browser/restitution.js` (jsdelivr sert le paquet npm). L'URL `/gh/` de jsdelivr (`https://cdn.jsdelivr.net/gh/BESSON-AGENCY/vauban-restitution@v0.1.1/dist/browser/restitution.js`) n'est pas chargeable par un artefact : le bac à sable n'accepte que `/npm/`.
 
 ## Le document minimal d'un artefact
 
 ```html
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>…</title></head><body><script type="text/markdown" id="restitution">…le Markdown…</script><script src="https://cdn.jsdelivr.net/npm/@vauban/restitution@0.1.1/dist/browser/restitution.js"></script></body></html>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>…</title></head><body><script type="text/markdown" id="restitution">…le Markdown…</script><script src="https://cdn.jsdelivr.net/npm/@vaubanhq/restitution@0.1.1/dist/browser/restitution.js"></script></body></html>
 ```
 
 Le chargeur lit le script `#restitution` (le Markdown peut être indenté dans la page), le lit selon la grammaire, compose avec `VAUBAN_CHARTE` (ou la charte posée dans `window.RESTITUTION_CHARTE` avant le chargeur), injecte le HTML et le CSS, charge la police (Jost, avec repli système) et, s'il y a une carte ou un parcours à dessiner, Mermaid 11.12.0 depuis cdnjs. Si le Markdown sort de la grammaire, la page affiche la liste des refus (ligne et raison) au lieu du document.
@@ -68,7 +68,7 @@ La liste complète des refus est dans `test/grammar.test.ts`.
 ## Côté serveur
 
 ```ts
-import { parse, compose, validate, VAUBAN_CHARTE, formatRefusal } from '@vauban/restitution';
+import { parse, compose, validate, VAUBAN_CHARTE, formatRefusal } from '@vaubanhq/restitution';
 
 const result = parse(markdown);                 // { ok, document, refusals }
 if (!result.ok) console.log(result.refusals.map(formatRefusal));
@@ -95,6 +95,8 @@ Aucune valeur de charte n'est écrite dans les compositions ni dans le CSS : tou
 ## Le CSS
 
 `src/css/` contient des **copies fidèles** des feuilles du design system (`tokens.css`, `tokens-print.css`, `components.css`, `editorial.css`, `pages.css`, `decisions.css`) et `profile.css`, le profil de la restitution (règles A4 de la maquette, qui n'existent pas encore dans le design system ; à y remonter). `scripts/build-css.mjs` élague les feuilles aux classes que les compositions emploient et les minifie dans `src/css.generated.ts`.
+
+`npm run parity` compare `test/fixtures/parity/` (corpus partagé avec MIROIR : même verdict des deux analyseurs pour chaque fichier) au dossier de MIROIR (chemin en argument ou `MIROIR_PARITY_DIR`).
 
 `npm run drift` (ou `node scripts/check-ds-drift.mjs <chemin du dépôt du design system>`, ou `VAUBAN_DS_DIR`) compare les copies, les jetons de `VAUBAN_CHARTE`, le logo et le motif au dépôt du design system, et échoue en cas de dérive.
 

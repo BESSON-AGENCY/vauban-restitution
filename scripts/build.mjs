@@ -37,7 +37,7 @@ await build({
   target: 'es2019',
   minify: true,
   legalComments: 'none',
-  banner: { js: `/* @vauban/restitution ${version}, construit depuis ${sha} */` },
+  banner: { js: `/* @vaubanhq/restitution ${version}, construit depuis ${sha} */` },
 });
 run('npx', ['tsc', '-p', 'tsconfig.build.json']);
 

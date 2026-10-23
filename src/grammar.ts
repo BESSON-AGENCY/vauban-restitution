@@ -41,7 +41,7 @@ const MONTHS: Record<string, number> = {
 const HEAD = /^## (.+?) \{([a-z-]+)\}\s*$/;
 const FIG = /^- « (.*?)\*\*(.+?)\*\*(.*?) »\s*(.*)$/;
 const RESTE_ITEM = /^- (« .+ »)(?: \((« .+ »)\))?$/;
-const META = /^(\d{1,2}(?:er)?) (\S+) (\d{4}) · (\S.*)$/;
+const META = /^(\d{1,2}(?:er)?) (\S+) (\d{4})(?: · (\S.*))?$/;
 
 const LABELS: Record<ItemKind, string> = {
   p: 'un paragraphe',
@@ -229,6 +229,13 @@ function readTable(rows: string[], err: (msg: string) => void, columns?: number)
     }
   }
   return { head, rows: body };
+}
+
+/** A page conclusion is the whole paragraph in one bold span: **…** with no other ** inside. */
+function isTake(t: string): boolean {
+  if (!t.startsWith('**') || !t.endsWith('**') || t.length < 5) return false;
+  const inner = t.slice(2, -2);
+  return !inner.includes('**') && !inner.startsWith('*') && !inner.endsWith('*');
 }
 
 /** Parses « step (roles) → [coince] step → … ». */
@@ -494,7 +501,7 @@ export function parse(markdown: string): ParseResult {
     if (t.includes(' → ')) {
       if (cur.kind === 'cas' && sub !== null) add({ kind: 'flow', line: n, steps: readFlowLine(t) }, n);
       else err(n, 'la ligne → (déroulé de secours) n’existe que dans un ### cas');
-    } else if (/^\*\*[^*].*[^*]\*\*$/.test(t)) {
+    } else if (isTake(t)) {
       add({ kind: 'take', line: n, text: t.slice(2, -2) }, n);
     } else {
       add({ kind: 'p', line: n, text: t }, n);
@@ -506,9 +513,9 @@ export function parse(markdown: string): ParseResult {
   if (title !== null) {
     const m = META.exec(metaRaw);
     const iso = m ? isoDate(parseInt(m[1]!, 10), m[2]!, Number(m[3])) : null;
-    if (!m) err(metaLine || 2, 'la ligne qui suit # doit être « date · prénom » (ex. 23 octobre 2026 · Martin)');
+    if (!m) err(metaLine || 2, 'la ligne qui suit # doit être « date · prénom » ou « date » (ex. 23 octobre 2026 · Martin)');
     else if (!iso) err(metaLine, `date illisible : « ${m[1]} ${m[2]} ${m[3]} »`);
-    else meta = { raw: metaRaw, date: `${m[1]} ${m[2]} ${m[3]}`, iso, person: m[4]! };
+    else meta = { raw: metaRaw, date: `${m[1]} ${m[2]} ${m[3]}`, iso, person: m[4] ?? '' };
   }
   if (blocks.length === 0) err(1, 'aucun bloc ##');
 

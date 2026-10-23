@@ -111,6 +111,7 @@ const REFUSALS: [string, string, number, string][] = [
   ],
   ['second title', '# A\n23 octobre 2026 · Martin\n\n# B\n', 4, 'un seul titre #'],
   ['bad meta line', '# A\nle 23 octobre\n\n## T {recit}\nx\n', 2, 'date · prénom'],
+  ['meta with a dot but no name', '# A\n23 octobre 2026 · \n\n## T {recit}\nx\n', 2, 'date · prénom'],
   ['quote without space after >', wrap('>« un »'), 5, 'un espace après >'],
   ['lone >', wrap('>'), 5, 'un espace après >'],
   ['--- followed by text', wrap('---x'), 5, 'seul sur sa ligne'],
@@ -131,6 +132,37 @@ const REFUSALS: [string, string, number, string][] = [
   ['table without separator', wrap('| a | b |\n| 1 | 2 |\n| 3 | 4 |', '## T {tableau}'), 5, 'séparation'],
   ['mindmap alone before the first ### of a cas', wrap('Un texte.\n### Un cas\nx', '## Cas {cas}'), 5, 'seule une mindmap'],
 ];
+
+describe('cover without a first name', () => {
+  it('accepts the date alone and composes a cover with the date only', async () => {
+    const d = parseOk('# A\n23 octobre 2026\n\n## T {recit}\nx\n');
+    expect(d.meta).toMatchObject({ raw: '23 octobre 2026', iso: '2026-10-23', person: '' });
+    const { composeParts } = await import('../src/compose/index.js');
+    const { VAUBAN_CHARTE } = await import('../src/charte.js');
+    const html = composeParts(d, VAUBAN_CHARTE).html;
+    expect(html).toContain('<time datetime="2026-10-23">23 octobre 2026</time></p>');
+    expect(html).toContain('<span>23 octobre 2026</span><span>02 / 02</span>');
+  });
+});
+
+describe('bold in a paragraph', () => {
+  const items = (body: string) => parseOk(wrap(body)).blocks[0]!.items.map((i) => i.kind);
+  it('is a conclusion only when the whole line is one bold span', () => {
+    expect(items('**Une conclusion entière.**')).toEqual(['take']);
+    expect(items('**Un** mot **deux**')).toEqual(['p']);
+    expect(items('**Un** mot')).toEqual(['p']);
+    expect(items('Un mot **deux**')).toEqual(['p']);
+  });
+});
+
+describe('journey scores', () => {
+  it.each(['a: b : 3', 'a: 6', 'a: 0: x', 'a', 'a:'])('refuses « %s »', (line) => {
+    expect(parse(wrap(`\`\`\`mermaid\njourney\n  ${line}\n\`\`\``, '## J {journee}')).ok).toBe(false);
+  });
+  it.each(['a: 3', 'a b : 4 : moi, toi'])('accepts « %s »', (line) => {
+    expect(parse(wrap(`\`\`\`mermaid\njourney\n  ${line}\n\`\`\``, '## J {journee}')).ok).toBe(true);
+  });
+});
 
 describe('cover date', () => {
   it('accepts the first of the month written 1er', () => {
