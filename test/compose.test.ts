@@ -8,7 +8,7 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
 // Frozen fingerprint of the reference restitution composed with VAUBAN_CHARTE. It changes when a
 // composition, the profile or a copied DS sheet changes: update it on purpose, after looking at the render.
-const REFERENCE_FINGERPRINT = 'a1bfeed43af178923bea10a0af872a435348a54436134e99de8e5a8a62a3ca24';
+const REFERENCE_FINGERPRINT = '37c4091768d849f30021439c64a08ecae23684fea0412b1378478414e8809d0c';
 
 describe('reference composition', () => {
   const doc = parseOk(fixture('reference.md'));

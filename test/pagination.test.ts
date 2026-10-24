@@ -5,7 +5,7 @@ import { composeParts } from '../src/compose/index.js';
 import { parseOk } from './helpers.js';
 
 /** Happy DOM has no layout. These measured boxes exercise page cuts; real font/SVG layout is checked in the browser. */
-async function paginate(markdown: string, tallText = new Map<string, number>()) {
+async function paginate(markdown: string, tallText = new Map<string, number>(), diagramHeight = 400) {
   const window = new Window({ settings: { disableJavaScriptFileLoading: true, disableCSSFileLoading: true } });
   const { document } = window;
   const composed = composeParts(parseOk(markdown), { ...VAUBAN_CHARTE, fonts: { stylesheet: null } });
@@ -19,10 +19,11 @@ async function paginate(markdown: string, tallText = new Map<string, number>()) 
     if (el.matches('.va-cover')) return 400;
     if (el.matches('.vd-heading')) return 60;
     if (el.matches('.vd-subheading')) return 40;
-    if (el.matches('.vr-diagram')) return 400;
+    if (el.matches('.vr-diagram')) return diagramHeight;
+    if (el.matches('.vd-journey > li')) return 120;
     if (el.matches('p,h3,tr')) return tallText.get(el.textContent ?? '') ?? 80;
     const children = [...el.children];
-    return children.reduce((sum, child) => sum + height(child), 0) + Math.max(0, children.length - 1) * gap;
+    return children.reduce((sum, child) => sum + height(child), 0) + Math.max(0, children.length - 1) * (el.matches('.vd-journey') ? 0 : gap);
   }
   function top(el: Element): number {
     if (el.matches('.va-page')) {
@@ -32,7 +33,7 @@ async function paginate(markdown: string, tallText = new Map<string, number>()) 
     if (el.matches('.va-composition')) return top(el.closest('.va-page')!) + 100;
     const parent = el.parentElement!;
     const children = [...parent.children];
-    return top(parent) + children.slice(0, children.indexOf(el)).reduce((sum, child) => sum + height(child) + gap, 0);
+    return top(parent) + children.slice(0, children.indexOf(el)).reduce((sum, child) => sum + height(child) + (parent.matches('.vd-journey') ? 0 : gap), 0);
   }
   Object.defineProperty(window.HTMLElement.prototype, 'getBoundingClientRect', { configurable: true, value: function (this: Element) {
     const y = top(this), h = height(this);
@@ -90,6 +91,40 @@ describe('content pagination with measured boxes (VBA-3223)', () => {
     expect(pages[2]!.textContent).toContain('Narrative');
     expect(pages[2]!.textContent).toContain('Inside');
     expect(pages[2]!.textContent).toContain('First.');
+  });
+
+  it('reserves the parent heading when a long case body would fit only without that heading', async () => {
+    const paragraphs = ['First case paragraph.', 'Second case paragraph.', 'Third case paragraph.', 'Fourth case paragraph.'];
+    const { document } = await paginate(wrap('## Summary {recit}\nOpening.\n\n**Takeaway.**\n\n## Cases {cas}\n### Long case\n' + paragraphs.join('\n\n') + '\n'),
+      new Map([['Opening.', 740], ['Takeaway.', 90], ...paragraphs.map((text, i) => [text, [120, 170, 250, 200][i]!] as [string, number])]));
+    expect(document.querySelector('[data-vr-overflow]')).toBeNull();
+    const takeawayPage = pagesOf(document).find((page) => page.querySelector('.va-takeaway'))!;
+    expect(takeawayPage.textContent).toContain('Cases');
+    expect(takeawayPage.textContent).toContain('Long case');
+    expect(takeawayPage.textContent).toContain(paragraphs[0]);
+    expect([...document.querySelectorAll('.vr-section p')].map((p) => p.textContent)).toEqual(['Opening.', 'Takeaway.', ...paragraphs]);
+  });
+
+  it('splits a textual flow between steps instead of isolating the whole flow after its case', async () => {
+    const steps = Array.from({ length: 8 }, (_, i) => `Step ${i} (Role ${i})`);
+    const { document } = await paginate(wrap('## Cases {cas}\n### A case\nCase narrative.\n\n' + steps.join(' → ') + '\n'), new Map([['Case narrative.', 450]]));
+    expect(document.querySelector('[data-vr-overflow]')).toBeNull();
+    const casePage = pagesOf(document).find((page) => page.textContent?.includes('Case narrative.'))!;
+    expect(casePage.querySelector('.vd-journey li')).not.toBeNull();
+    expect(document.querySelectorAll('.vd-journey')).toHaveLength(2);
+    expect([...document.querySelectorAll('.vd-journey li h3')].map((h) => h.textContent)).toEqual(steps.map((_, i) => `Step ${i}`));
+    expect([...document.querySelectorAll('.vd-step-number')].map((n) => n.textContent)).toEqual(steps.map((_, i) => String(i + 1).padStart(2, '0')));
+  });
+
+  it.each([[105, 158, 237, 185], [95, 95, 400, 350]])('keeps the final two case paragraphs together before an indivisible diagram (%j)', async (...heights) => {
+    const paragraphs = ['First case paragraph.', 'Second case paragraph.', 'Third case paragraph.', 'Fourth case paragraph.'];
+    const { document } = await paginate(wrap('## Summary {recit}\nOpening.\n\n**Takeaway.**\n\n## Cases {cas}\n### Long case\n' + paragraphs.join('\n\n') + '\n```mermaid\nflowchart TB\n A["one"] --> B["two"]\n```\n'),
+      new Map([['Opening.', 740], ['Takeaway.', 90], ...paragraphs.map((text, i) => [text, heights[i]!] as [string, number])]), 760);
+    const lastTextPage = pagesOf(document).find((page) => [...page.querySelectorAll('p')].some((p) => p.textContent === paragraphs[3]))!;
+    expect(lastTextPage.textContent).toContain(paragraphs[2]);
+    expect(document.querySelector('[data-vr-overflow]')).toBeNull();
+    expect([...document.querySelectorAll('.vr-section p')].filter((p) => p.closest('.vr-diagram') === null).map((p) => p.textContent)).toEqual(['Opening.', 'Takeaway.', ...paragraphs]);
+    expect(document.querySelectorAll('.vr-diagram')).toHaveLength(1);
   });
 
   it('continues beyond forty pages and assigns each continuation a distinct accessible label', async () => {

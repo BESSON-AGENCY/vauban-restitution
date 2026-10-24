@@ -118,6 +118,7 @@ document.head.appendChild(s)})}
 function isTitle(el){return el.matches(".vd-heading,.vd-subheading")}
 function hostOf(el){
 if(el.matches(".va-composition,.vr-section,.vd-text,.vr-figures,.va-reading-section,ul,ol"))return el;
+if(el.matches(".vd-journey-wrap"))return el.querySelector(":scope > ol");
 if(el.matches(".vd-callout"))return el.querySelector(":scope > div > div");
 if(el.matches(".vd-table,.vd-comparison"))return el.querySelector("tbody");
 return null}
@@ -135,14 +136,24 @@ if(rect.bottom<=limit)return null;
 /* A complete section or case that fits an empty page moves as a unit, title and diagram included. */
 if(el.matches(".vr-section,.va-reading-section")&&rect.height<=capacity&&rect.top>top+1)return{whole:true};
 var host=hostOf(el);if(!host)return{whole:true};
-var kids=[].slice.call(host.children),j=0,partial=false,r=null,s,tailKids,ch;
+var kids=[].slice.call(host.children),j=0,partial=false,r=null,s,tailKids,ch,bottomSpace,titles,childCapacity,nextArea;
 if(!kids.length)return{whole:true};
-limit-=Math.max(0,el.getBoundingClientRect().bottom-kids[kids.length-1].getBoundingClientRect().bottom);
+bottomSpace=Math.max(0,rect.bottom-kids[kids.length-1].getBoundingClientRect().bottom);
+limit-=bottomSpace;
 while(j<kids.length&&kids[j].getBoundingClientRect().bottom<=limit)j++;
 if(j===kids.length)return null;
 s=j;
-if(kids[j].getBoundingClientRect().top<limit){r=cut(kids[j],limit,force&&kids.slice(0,j).every(isTitle),capacity,top);if(r&&r.tail){partial=true;s=j+1}}
+if(kids[j].getBoundingClientRect().top<limit){
+titles=kids.slice(0,j).every(isTitle);
+/* A child moved with its parent titles must fit the page with those titles, not by itself. */
+childCapacity=capacity-bottomSpace-(titles?Math.max(0,kids[j].getBoundingClientRect().top-rect.top):0);
+r=cut(kids[j],limit,force&&titles,childCapacity,top);if(r&&r.tail){partial=true;s=j+1}}
 if(!partial)while(s>0&&isTitle(kids[s-1]))s--;
+/* Avoid an isolated final paragraph when the last pair fits together on the continuation. */
+if(!partial&&el.matches(".vd-text")&&s>1&&kids.length-s===1){
+/* Parent titles stay on the first fragment, so the pair gets the full next content area. */
+nextArea=areaOf(el);
+if(kids[s].getBoundingClientRect().bottom-kids[s-1].getBoundingClientRect().top<=nextArea.min-nextArea.chrome)s--}
 if(s===0){if(!force)return{whole:true};
 /* An indivisible first unit may exceed a page; retain its title rather than emitting a title-only page. */
 s=1;while(s<kids.length&&isTitle(kids[s-1]))s++}
