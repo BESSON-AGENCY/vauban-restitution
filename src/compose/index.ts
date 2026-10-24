@@ -4,7 +4,7 @@ import { RESTITUTION_CSS } from '../css.restitution.js';
 import type { Item, RestitutionDocument } from '../types.js';
 import * as b from './blocks.js';
 import { esc, inline, pad2 } from './html.js';
-import { mermaidBootScript } from './mermaid.js';
+import { bootScript } from './mermaid.js';
 
 interface Page {
   heading: string | null;
@@ -14,7 +14,7 @@ interface Page {
   body: ({ p: string } | { html: string } | { sub: string; number: string | null })[];
   take: string | null;
   reading: string[] | null;
-  fresh: boolean;
+  breakBefore: boolean;
 }
 
 export interface Composed {
@@ -26,13 +26,16 @@ export interface Composed {
   css: string;
   /** The pages, as HTML (a hidden logo symbol then `<main>`). */
   html: string;
-  /** Script that draws the Mermaid boxes, or null when the document has none. */
+  /** The same script as `script`, or null when the document has no diagram (kept for callers of 0.1). */
   mermaidScript: string | null;
+  /** The page script (diagrams fitted to their page, page continuation, footers renumbered). Always present. */
+  script: string;
+  /** Initial pages (cover and explicit breaks); the browser measures the final pagination. */
   pageCount: number;
 }
 
 export interface ComposeOptions {
-  /** Inline the Mermaid script in the full page (default true). */
+  /** Inline the page script in the full page (default true). */
   mermaid?: boolean;
 }
 
@@ -51,14 +54,14 @@ function logoParts(charte: Charte): { viewBox: string; label: string; inner: str
   return { viewBox, label: /\baria-label="([^"]*)"/.exec(m[1]!)?.[1] ?? charte.name, inner: m[2]! };
 }
 
-function renderItem(item: Item, blockKind: Parameters<typeof b.table>[0], blockTitle: string): string {
+function renderItem(item: Item, blockKind: Parameters<typeof b.table>[0], blockTitle: string, charte: Charte): string {
   switch (item.kind) {
     case 'quote':
       return b.pullquote(item.text);
     case 'figures':
       return b.figures(item.figures);
     case 'diagram':
-      return b.diagram(item.diagram);
+      return b.diagram(item.diagram, charte);
     case 'flow':
       return b.flow(item.steps);
     case 'table':
@@ -116,8 +119,8 @@ export function composeParts(doc: RestitutionDocument, charte: Charte): Composed
   const logo = logoParts(charte);
   const pages: Page[] = [];
   let pg!: Page;
-  const newPage = (heading: string | null, surface: 'nuit' | null = null, label: string | null = heading) => {
-    pg = { heading, label, surface, body: [], take: null, reading: null, fresh: heading !== null };
+  const newPage = (heading: string | null, surface: 'nuit' | null = null, label: string | null = heading, breakBefore = false) => {
+    pg = { heading, label, surface, body: [], take: null, reading: null, breakBefore };
     pages.push(pg);
   };
 
@@ -127,7 +130,8 @@ export function composeParts(doc: RestitutionDocument, charte: Charte): Composed
     const feed = (items: Item[]) => {
       for (const item of items) {
         if (item.kind === 'break') {
-          newPage(null);
+          newPage(null, block.kind === 'reste' ? 'nuit' : null, null, true);
+          if (block.kind === 'lecture') pg.reading = [];
           continue;
         }
         if (item.kind === 'take') {
@@ -139,19 +143,26 @@ export function composeParts(doc: RestitutionDocument, charte: Charte): Composed
           continue;
         }
         if (item.kind === 'p') pg.body.push({ p: item.text });
-        else pg.body.push({ html: renderItem(item, block.kind, block.title) });
+        else pg.body.push({ html: renderItem(item, block.kind, block.title, charte) });
       }
     };
     feed(block.items);
     block.cases.forEach((c, k) => {
-      // A case has its own page; a section of a recit stays on the page of its part.
-      if (block.kind === 'cas') newPage(null, null, c.title);
+      // Keep each case as a unit for measured pagination, without imposing a page break.
+      // The first case carries the block title when there is no introductory material.
+      const headsFirstCase = k === 0 && pg.body.length === 0 && pg.take === null && pg.reading === null;
+      if (block.kind === 'cas' && !headsFirstCase) newPage(null, null, c.title);
       pg.body.push({ sub: c.title, number: block.kind === 'cas' ? pad2(k + 1) : null });
       feed(c.items);
     });
   }
 
-  const total = pages.length + 1;
+  const groups: Page[][] = [];
+  for (const part of pages) {
+    if (!groups.length || part.breakBefore) groups.push([]);
+    groups[groups.length - 1]!.push(part);
+  }
+  const total = groups.length + 1;
   const T = esc(doc.title);
   const brand = (id: string) =>
     `<svg class="vd-brand" viewBox="${esc(logo.viewBox)}" role="img" aria-label="${esc(logo.label)}"><use href="#${id}"/></svg>`;
@@ -169,12 +180,15 @@ export function composeParts(doc: RestitutionDocument, charte: Charte): Composed
       `${doc.meta.objective ? `<p class="va-cover-subtitle">${inline(doc.meta.objective)}</p>` : ''}<div class="va-cover-art" aria-hidden="true">${charte.motif}</div><p class="va-cover-meta">` +
       `<time datetime="${doc.meta.iso}">${esc(doc.meta.date)}</time>${doc.meta.person ? `<span>${esc(doc.meta.person)}</span>` : ''}</p></div>`,
   );
-  const arts = pages.map((p, idx) => {
-    let body = p.heading ? `<header class="vd-heading"><h2>${inline(p.heading)}</h2></header>` : '';
-    body += pageBody(p);
-    if (p.reading !== null) body += b.reading(p.reading);
-    if (p.take) body += b.takeaway(p.take);
-    return frame(idx + 2, p.label ?? `Page ${idx + 2}`, p.surface, body);
+  const arts = groups.map((parts, idx) => {
+    const content = parts.map((p) => {
+      let body = p.heading ? `<header class="vd-heading"><h2>${inline(p.heading)}</h2></header>` : '';
+      body += pageBody(p);
+      if (p.reading !== null) body += b.reading(p.reading);
+      if (p.take) body += b.takeaway(p.take);
+      return `<section class="vr-section"${p.surface ? ` data-surface="${p.surface}"` : ''}>${body}</section>`;
+    }).join('');
+    return frame(idx + 2, parts[0]?.label ?? `Page ${idx + 2}`, null, content);
   });
 
   const symbol = (id: string, svg: string) => {
@@ -188,13 +202,15 @@ export function composeParts(doc: RestitutionDocument, charte: Charte): Composed
     '</svg>' +
     `<main class="vr-restitution">${cover}${arts.join('')}</main>`;
   const hasMermaid = html.includes('data-mermaid="');
+  const script = bootScript(charte);
   return {
     title: doc.title,
     lang: 'fr',
     fontsHref: charte.fonts.stylesheet,
     css: tokensCss(charte) + DS_CSS + RESTITUTION_CSS,
     html,
-    mermaidScript: hasMermaid ? mermaidBootScript(charte) : null,
+    mermaidScript: hasMermaid ? script : null,
+    script,
     pageCount: total,
   };
 }
@@ -203,7 +219,7 @@ export function composeParts(doc: RestitutionDocument, charte: Charte): Composed
 export function compose(doc: RestitutionDocument, charte: Charte, options: ComposeOptions = {}): string {
   const c = composeParts(doc, charte);
   const fonts = c.fontsHref ? `<link rel="stylesheet" href="${esc(c.fontsHref)}">` : '';
-  const script = c.mermaidScript && options.mermaid !== false ? `<script>${c.mermaidScript}</script>` : '';
+  const script = options.mermaid !== false ? `<script>${c.script}</script>` : '';
   return (
     `<!doctype html>\n<html lang="${c.lang}">\n<head>\n<meta charset="utf-8">\n` +
     '<meta name="viewport" content="width=device-width,initial-scale=1">\n' +

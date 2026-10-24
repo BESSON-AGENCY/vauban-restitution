@@ -84,7 +84,7 @@ Votre assistant, vous vous en servez tous les jours, mais dans l'équipe : « ch
 Le mardi 20 octobre 2026, « quand le distributeur m'a demandé où en était le film. J'ai dû appeler la cheffe de projet puis le monteur. »
 
 ## Ce que je comprends de vos cas {lecture}
-Lecture de Vauban, pas vos mots.
+Ma lecture, pas vos mots.
 
 Pour le calage des tournages, l'information vous arrive après coup, et c'est à vous d'aller la chercher. Vous avez dit : « personne me prévient, je dois aller voir moi-même ».
 

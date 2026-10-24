@@ -34,12 +34,12 @@ function page(markdown: string | null, charte?: unknown) {
 describe('browser bundle', () => {
   it('reads the Markdown script and composes the pages', () => {
     const { document } = page(fixture('reference.md'));
-    expect(document.querySelectorAll('.va-page')).toHaveLength(12);
+    expect(document.querySelectorAll('.va-page')).toHaveLength(5);
     expect(document.title).toBe('Vos priorités, vos irritants, ce qui ne va pas');
     expect(document.querySelector('style')!.textContent).toContain('--ds-blue:#0755ff');
     expect(document.querySelector('link[rel=stylesheet]')!.getAttribute('href')).toContain('fonts.googleapis.com');
     expect(document.querySelector('.vd-callout[data-variant=lecture] h3')!.textContent).toBe(
-      'Lecture de Vauban, pas vos mots.',
+      'Ma lecture, pas vos mots.',
     );
   });
 
@@ -48,7 +48,9 @@ describe('browser bundle', () => {
     const scripts = [...withMap.document.querySelectorAll('script')].map((s) => s.textContent ?? '');
     expect(scripts.some((t) => t.includes('cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js'))).toBe(true);
     const plain = page('# T\n23 octobre 2026 · A\n\n## B {recit}\nUn texte.\n');
-    expect([...plain.document.querySelectorAll('script')].filter((s) => s.id !== 'restitution')).toHaveLength(0);
+    // the page script is always there (page continuation); it loads Mermaid only when a box asks for it
+    expect([...plain.document.querySelectorAll('script')].filter((s) => s.id !== 'restitution')).toHaveLength(1);
+    expect(plain.document.querySelector('.vr-diagram')).toBeNull();
     expect(plain.document.querySelectorAll('.va-page')).toHaveLength(2);
   });
 
@@ -60,7 +62,8 @@ describe('browser bundle', () => {
   it('accepts a Markdown indented inside the page', () => {
     const md = fixture('genres.md').split('\n').map((l) => (l ? `    ${l}` : l)).join('\n');
     const { document } = page(md);
-    expect(document.querySelectorAll('.va-page').length).toBeGreaterThan(5);
+    expect(document.querySelectorAll('.va-page')).toHaveLength(2);
+    expect(document.querySelectorAll('.vr-section').length).toBeGreaterThan(5);
   });
 
   it('shows the grammar refusals readably', () => {

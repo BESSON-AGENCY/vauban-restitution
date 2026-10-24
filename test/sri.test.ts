@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { MERMAID_INTEGRITY, MERMAID_URL, mermaidBootScript } from '../src/compose/mermaid.js';
+import { MERMAID_INTEGRITY, MERMAID_URL, bootScript } from '../src/compose/mermaid.js';
 import { VAUBAN_CHARTE } from '../src/charte.js';
 import { MERMAID_URL as SCRIPT_URL, mermaidIntegrity } from '../scripts/sri.mjs';
 
 describe('Mermaid subresource integrity', () => {
   it('is asked for, with an anonymous cross-origin load, in the boot script', () => {
-    const js = mermaidBootScript(VAUBAN_CHARTE);
+    const js = bootScript(VAUBAN_CHARTE);
     expect(js).toContain(MERMAID_INTEGRITY);
     expect(js).toContain('s.integrity=c.integrity;s.crossOrigin="anonymous"');
     expect(js.indexOf('s.integrity')).toBeLessThan(js.indexOf('s.src='));

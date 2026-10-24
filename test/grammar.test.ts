@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BLOCK_KINDS, CATALOGUE } from '../src/catalogue.js';
-import { checkFrame, parse, validate } from '../src/grammar.js';
+import { checkFrame, formatRefusal, parse, validate } from '../src/grammar.js';
+import { LEGACY_READING_MARK, PREFERRED_READING_MARK, READING_MARK, READING_MARKS } from '../src/index.js';
 import { fixture, parseOk, wrap } from './helpers.js';
 
 describe('reference document', () => {
@@ -47,7 +48,34 @@ describe('reference document', () => {
 
   it('keeps the take of a page and the reading mark', () => {
     expect(doc.blocks[0]!.items.some((i) => i.kind === 'take')).toBe(true);
-    expect(doc.blocks[4]!.items[0]).toMatchObject({ kind: 'p', text: 'Lecture de Vauban, pas vos mots.' });
+    expect(doc.blocks[4]!.items[0]).toMatchObject({ kind: 'p', text: 'Ma lecture, pas vos mots.' });
+  });
+
+  it('still accepts the opening line written before 0.2.0, and shows it as written', () => {
+    const old = fixture('reference.md').replace('Ma lecture, pas vos mots.', 'Lecture de Vauban, pas vos mots.');
+    expect(validate(old)).toEqual([]);
+    expect(parseOk(old).blocks[4]!.items[0]).toMatchObject({ kind: 'p', text: 'Lecture de Vauban, pas vos mots.' });
+  });
+
+  it('accepts the preferred editorial opening without changing the reading content', () => {
+    const opening = 'Voici ma lecture de vos cas. Vous pouvez la corriger.';
+    const source = fixture('reference.md').replace('Ma lecture, pas vos mots.', opening);
+    expect(validate(source)).toEqual([]);
+    const reading = parseOk(source).blocks[4]!;
+    expect(reading.items[0]).toEqual({ ...doc.blocks[4]!.items[0], text: opening });
+    expect(reading.items.slice(1)).toEqual(doc.blocks[4]!.items.slice(1));
+  });
+
+  it('keeps the public opening constants compatible and lists only the three accepted lines', () => {
+    expect(PREFERRED_READING_MARK).toBe('Voici ma lecture de vos cas. Vous pouvez la corriger.');
+    expect(READING_MARK).toBe('Ma lecture, pas vos mots.');
+    expect(LEGACY_READING_MARK).toBe('Lecture de Vauban, pas vos mots.');
+    expect(READING_MARKS).toEqual([PREFERRED_READING_MARK, READING_MARK, LEGACY_READING_MARK]);
+  });
+
+  it('refuses any other opening line, and names the current one', () => {
+    const other = fixture('reference.md').replace('Ma lecture, pas vos mots.', 'Ma lecture à moi, pas vos mots.');
+    expect(validate(other).map(formatRefusal).join('\n')).toContain('Voici ma lecture de vos cas. Vous pouvez la corriger.');
   });
 
   it('validates with no refusal', () => {
@@ -89,7 +117,7 @@ const REFUSALS: [string, string, number, string][] = [
   ['two Pour lines', '# T\n23 octobre 2026 · Martin\nPour Martin, Acme\nPour Autre\n\n## Titre {recit}\nx\n', 4, 'au plus trois lignes'],
   ['empty Pour', '# T\n23 octobre 2026 · Martin\nPour \n\n## Titre {recit}\nx\n', 3, 'dit pour qui'],
   ['reserved title with another genre', wrap('', '## Ce que je comprends de vos cas {recit}'), 4, 'titre réservé'],
-  ['reserved genre with another title', wrap('Lecture de Vauban, pas vos mots.', '## Autre titre {lecture}'), 4, 'a pour titre'],
+  ['reserved genre with another title', wrap('Ma lecture, pas vos mots.', '## Autre titre {lecture}'), 4, 'a pour titre'],
   ['structure outside the genre', wrap('| a | b |\n| --- | --- |\n| 1 | 2 |'), 5, 'n’est pas accepté dans un bloc recit'],
   ['### outside a cas or a recit', wrap('### Un cas', '## Chiffres {chiffres}'), 5, 'n’existe que dans un bloc cas ou recit'],
   ['cas without ###', wrap('', '## Cas {cas}'), 4, 'au moins un ### cas'],
@@ -110,7 +138,13 @@ const REFUSALS: [string, string, number, string][] = [
   ['reading without the mark', wrap('Un point. Vous avez dit : « oui ».', '## Ce que je comprends de vos cas {lecture}'), 4, 's’ouvre par'],
   [
     'reading point without a quotation',
-    wrap('Lecture de Vauban, pas vos mots.\n\nUn point sans citation.', '## Ce que je comprends de vos cas {lecture}'),
+    wrap('Ma lecture, pas vos mots.\n\nUn point sans citation.', '## Ce que je comprends de vos cas {lecture}'),
+    7,
+    'contient une citation',
+  ],
+  [
+    'preferred opening still requires a quotation in each reading point',
+    wrap('Voici ma lecture de vos cas. Vous pouvez la corriger.\n\nUn point sans citation.', '## Ce que je comprends de vos cas {lecture}'),
     7,
     'contient une citation',
   ],

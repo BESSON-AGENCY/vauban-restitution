@@ -1,4 +1,5 @@
 import type { BlockKind, Diagram, Figure, FlowStep, ListItem, Table } from '../types.js';
+import type { Charte } from '../charte.js';
 import { esc, inline, pad2 } from './html.js';
 import { PICTO_IDEE, pictogram } from './pictos.js';
 
@@ -54,39 +55,37 @@ export function flow(steps: FlowStep[]): string {
   return `<section class="vd-journey-wrap" data-variant="travel"><ol class="vd-journey">${li}</ol></section>`;
 }
 
-function timeline(events: { when: string; what: string[] }[]): string {
-  const li = events
-    .map((e) => {
-      const [first, ...rest] = e.what;
-      return (
-        `<li><time>${esc(e.when)}</time><div><h3>${esc(first ?? '')}</h3>` +
-        rest.map((r) => `<p>${esc(r)}</p>`).join('') +
-        '</div></li>'
-      );
-    })
-    .join('');
-  return `<ol class="vd-timeline">${li}</ol>`;
-}
-
 /** The text a Mermaid box shows when it is not drawn (no script, no network, a canvas). */
 function fallbackText(d: Diagram): string {
   if (d.type === 'mindmap') return `${d.root} : ${d.branches.join(' ; ')}`;
   if (d.type === 'journey') return d.tasks.join(' → ');
-  return '';
+  if (d.type === 'flowchart') return d.steps.map((s) => (s.roles ? `${s.label} (${s.roles})` : s.label)).join(' → ');
+  return d.events.map((e) => `${e.when} : ${e.what.join(' ; ')}`).join(' ; ');
 }
 
-function mermaidBox(d: Diagram): string {
+/**
+ * The source Mermaid draws. For a flowchart, the stuck class is styled here with the accent of the charte:
+ * the assistant never writes a classDef (the parser ignores its own), so the look stays the charte's.
+ */
+function mermaidSource(d: Diagram, charte: Charte): string {
+  if (d.type !== 'flowchart' || !d.steps.some((s) => s.stuck)) return d.source;
+  const accent = charte.tokens['--ds-blue']!;
+  const paper = charte.tokens['--ds-white']!;
+  const kept = d.source.split('\n').filter((l) => !l.trim().startsWith('classDef '));
+  kept.push(`  classDef coince fill:${accent},stroke:${accent},color:${paper},font-weight:600`);
+  return kept.join('\n');
+}
+
+function mermaidBox(d: Diagram, charte: Charte): string {
   return (
-    `<div class="vr-diagram" data-mermaid="${d.type}"><pre class="mermaid" hidden>${esc(d.source)}</pre>` +
+    `<div class="vr-diagram" data-mermaid="${d.type}"><pre class="mermaid" hidden>${esc(mermaidSource(d, charte))}</pre>` +
     `<p class="vr-diagram-fallback">${esc(fallbackText(d))}</p></div>`
   );
 }
 
-/** Flowcharts and timelines are drawn here, in the DS compositions; mindmap and journey stay Mermaid. */
-export function diagram(d: Diagram): string {
-  if (d.type === 'flowchart') return flow(d.steps);
-  if (d.type === 'timeline') return timeline(d.events);
-  return mermaidBox(d);
+/** Every diagram of a Mermaid block (flowchart, timeline, mindmap, journey) is drawn by Mermaid with the charte theme. */
+export function diagram(d: Diagram, charte: Charte): string {
+  return mermaidBox(d, charte);
 }
 
 export function table(kind: BlockKind, t: Table, title: string): string {

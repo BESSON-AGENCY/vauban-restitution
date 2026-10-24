@@ -53,7 +53,7 @@ Ce que vous avez tenté et ce que ça a donné.
 | Notion | les sujets | vous |
 
 ## Ce que je comprends de vos cas {lecture}
-Lecture de Vauban, pas vos mots.
+Ma lecture, pas vos mots.
 
 Pour les devis, vous attendez la réponse sans savoir où elle en est. Vous avez dit : « personne ne me prévient ».
 

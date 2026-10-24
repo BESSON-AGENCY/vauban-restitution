@@ -8,7 +8,7 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
 // Frozen fingerprint of the reference restitution composed with VAUBAN_CHARTE. It changes when a
 // composition, the profile or a copied DS sheet changes: update it on purpose, after looking at the render.
-const REFERENCE_FINGERPRINT = '5b38561e23a49c7e83427ddae5284c480ae27589f59b7dded66caec8191a501a';
+const REFERENCE_FINGERPRINT = '320555b3a8a16b3bd6f3122178f159cac59a9bc6dc9260677b2998ccfd1f2752';
 
 describe('reference composition', () => {
   const doc = parseOk(fixture('reference.md'));
@@ -22,38 +22,55 @@ describe('reference composition', () => {
     expect(compose(doc, VAUBAN_CHARTE)).toBe(html);
   });
 
-  it('makes 12 A4 pages with a numbered footer', () => {
+  it('starts with the cover and explicit page breaks, before browser measurement', () => {
     const c = composeParts(doc, VAUBAN_CHARTE);
-    expect(c.pageCount).toBe(12);
-    expect(c.html.match(/class="vd-document va-page"/g)).toHaveLength(12);
-    expect(c.html).toContain('02 / 12');
-    expect(c.html).toContain('12 / 12');
+    expect(c.pageCount).toBe(5);
+    expect(c.html.match(/class="vd-document va-page"/g)).toHaveLength(5);
+    expect(c.html).toContain('02 / 05');
+    expect(c.html).toContain('05 / 05');
   });
 
-  it('puts one page per part and per case, a page after each ---', () => {
-    const labels = [...composeParts(doc, VAUBAN_CHARTE).html.matchAll(/aria-label="([^"]*)"/g)].map((m) => m[1]);
-    expect(labels).toContain('Le planning des tournages et les validations client');
-    expect(labels).toContain('Le pipe du lundi');
-    expect(labels).toContain('Ce que nous n&#39;avons pas abordé'.replace('&#39;', "'"));
+  it('keeps the cases and all block titles in source order without implicit breaks', () => {
+    const content = composeParts(doc, VAUBAN_CHARTE).html;
+    expect(content.indexOf('Le planning des tournages et les validations client')).toBeLessThan(content.indexOf('Le pipe du lundi'));
+    expect(content).toContain("Ce que nous n'avons pas abordé");
+    expect(content).toContain('<section class="vr-section"');
   });
 
-  it('draws the flows and marks the stuck steps with the DS step mark', () => {
+  it('hands the flowcharts to Mermaid and marks the stuck steps with the accent of the charte', () => {
     const c = composeParts(doc, VAUBAN_CHARTE);
-    expect(c.html.match(/<ol class="vd-journey">/g)).toHaveLength(2);
-    expect(c.html.match(/aria-current="step"/g)).toHaveLength(3);
+    expect(c.html.match(/data-mermaid="flowchart"/g)).toHaveLength(2);
+    expect(c.html).not.toContain('vd-journey');
+    // The classDef is the engine's, written with the accent token; the assistant's own class lines stay.
+    expect(c.html.match(/classDef coince fill:#0755ff,stroke:#0755ff,color:#ffffff/g)).toHaveLength(2);
+    expect(c.html).toContain('class B,D coince');
     expect(c.html).not.toMatch(/amber|#845200/);
   });
 
-  it('keeps the mindmap for Mermaid, with a text fallback, and loads Mermaid 11.12.0 only then', () => {
+  it('ships a boot script that is plain ES5 and keeps a diagram and the text inside their A4 page', () => {
+    const script = composeParts(doc, VAUBAN_CHARTE).script;
+    expect(() => new Function(script)).not.toThrow();
+    expect(script).not.toMatch(/=>|\blet\b|\bconst\b|`|\?\./);
+    // Diagram candidates target the body size of the design system, independently of previous sections.
+    expect(script).toContain('"body":16');
+    expect(script).toContain('.va-page');
+    // page continuation: cuts between elements, repeats a table head, keeps the reading box going
+    expect(script).toContain('thead');
+    expect(script).toContain('.vd-callout');
+  });
+
+  it('keeps the schemas for Mermaid, with a text fallback, and loads Mermaid 11.12.0 only then', () => {
     const c = composeParts(doc, VAUBAN_CHARTE);
     expect(c.html).toContain('<pre class="mermaid" hidden>');
     expect(c.html).toContain('Vos cas : ');
+    expect(c.html).toContain('vente (le distributeur) → calage des tournages');
     expect(c.mermaidScript).toContain('mermaid/11.12.0/mermaid.min.js');
     const noMap = parseOk(fixture('genres.md'));
     expect(composeParts(noMap, VAUBAN_CHARTE).mermaidScript).not.toBeNull(); // genres.md has a mindmap
     const plain = parseOk('# T\n23 octobre 2026 · A\n\n## B {recit}\nUn texte.\n');
     expect(composeParts(plain, VAUBAN_CHARTE).mermaidScript).toBeNull();
-    expect(compose(plain, VAUBAN_CHARTE)).not.toContain('<script');
+    expect(composeParts(plain, VAUBAN_CHARTE).script).toContain('function paginate');
+    expect(compose(plain, VAUBAN_CHARTE, { mermaid: false })).not.toContain('<script');
   });
 
   it('has no kicker, no em dash, no assistant name', () => {
@@ -63,13 +80,24 @@ describe('reference composition', () => {
   });
 
   it('marks the reading as Vauban, not the person', () => {
-    expect(html).toContain('<h3>Lecture de Vauban, pas vos mots.</h3>');
+    expect(html).toContain('<h3>Ma lecture, pas vos mots.</h3>');
     expect(html).toContain('data-variant="lecture"');
+  });
+
+  it.each([
+    'Voici ma lecture de vos cas. Vous pouvez la corriger.',
+    'Ma lecture, pas vos mots.',
+    'Lecture de Vauban, pas vos mots.',
+  ])('renders the accepted opening as written: %s', (opening) => {
+    const source = fixture('reference.md').replace('Ma lecture, pas vos mots.', opening);
+    const content = composeParts(parseOk(source), VAUBAN_CHARTE).html;
+    const reference = composeParts(doc, VAUBAN_CHARTE).html;
+    expect(content).toBe(reference.replace('<h3>Ma lecture, pas vos mots.</h3>', `<h3>${opening}</h3>`));
   });
 
   it('puts the last block on the night surface', () => {
     expect(html).toContain('data-surface="nuit"');
-    expect(html.match(/data-surface="nuit"/g)).toHaveLength(1);
+    expect(composeParts(doc, VAUBAN_CHARTE).html.match(/<section class="vr-section" data-surface="nuit"/g)).toHaveLength(1);
   });
 
   it('escapes what the person wrote', () => {
@@ -93,9 +121,9 @@ describe('synthesis page and figures as text', () => {
     expect(html).toContain('<p class="va-intro">« <strong class="vr-figure-number">Trois jours</strong> perdus » sur les validations client.</p>');
     expect(html).not.toContain('vd-figure');
   });
-  it('has no pictogram in the flows', () => {
+  it('has no pictogram in the flows before Mermaid draws them', () => {
     const ref = composeParts(parseOk(fixture('reference.md')), VAUBAN_CHARTE).html;
-    const flows = ref.match(/<ol class="vd-journey">[\s\S]*?<\/ol>/g) ?? [];
+    const flows = ref.match(/<div class="vr-diagram" data-mermaid="flowchart">[\s\S]*?<\/div>/g) ?? [];
     expect(flows.length).toBe(2);
     for (const f of flows) expect(f).not.toContain('<svg');
   });
@@ -103,9 +131,38 @@ describe('synthesis page and figures as text', () => {
 
 describe('the other genres', () => {
   const html = compose(parseOk(fixture('genres.md')), VAUBAN_CHARTE);
-  it('draws a timeline with the DS timeline', () => {
-    expect(html).toContain('<ol class="vd-timeline">');
-    expect(html).toContain('<time>mars 2026</time>');
+  it('hands a timeline to Mermaid, with its dates as the fallback text', () => {
+    expect(html).toContain('<div class="vr-diagram" data-mermaid="timeline">');
+    expect(html).not.toContain('vd-timeline');
+    expect(html).toContain('mars 2026 : le premier devis refusé ; avril 2026 : la relance ; le second devis ; juin 2026 : la signature');
+  });
+  it('keeps the branches and loops the assistant wrote, and ignores a classDef of its own', () => {
+    const loop = parseOk(
+      '# T\n23 octobre 2026 · A\n\n## J {journee}\n```mermaid\nflowchart TB\n  A["montage"] --> B["client"]\n  B -->|retours| A\n  B -->|validé| C["fin"]\n  classDef coince fill:red\n  class B coince\n```\n',
+    );
+    const out = composeParts(loop, VAUBAN_CHARTE).html;
+    expect(out).toContain('B --&gt;|retours| A');
+    expect(out).toContain('B --&gt;|validé| C[&quot;fin&quot;]');
+    expect(out).not.toContain('fill:red');
+    expect(out.match(/classDef coince/g)).toHaveLength(1);
+  });
+  it('does not draw a classDef when no step is stuck', () => {
+    const d = parseOk('# T\n23 octobre 2026 · A\n\n## J {journee}\n```mermaid\nflowchart TB\n  A["a"] --> B["b"]\n```\n');
+    expect(composeParts(d, VAUBAN_CHARTE).html).not.toContain('classDef');
+  });
+  it('heads the first case page with the block title when the block has no text before it', () => {
+    const d = parseOk('# T\n23 octobre 2026 · A\n\n## Vos cas {cas}\n\n### Un cas\nTexte.\n\n### Un autre\nSuite.\n');
+    const c = composeParts(d, VAUBAN_CHARTE);
+    expect(c.pageCount).toBe(2);
+    const pages = c.html.split('<article').slice(2);
+    expect(pages[0]).toContain('<header class="vd-heading"><h2>Vos cas</h2></header>');
+    expect(pages[0]).toContain('<h3>Un cas</h3>');
+    expect(pages).toHaveLength(1);
+    expect(pages[0]).toContain('<h3>Un autre</h3>');
+  });
+  it('lets the browser place a mindmap and the following case according to available space', () => {
+    const d = parseOk('# T\n23 octobre 2026 · A\n\n## Vos cas {cas}\n```mermaid\nmindmap\n  root((Vos cas))\n    un\n```\n\n### Un cas\nTexte.\n');
+    expect(composeParts(d, VAUBAN_CHARTE).pageCount).toBe(2);
   });
   it('composes tables with vd-table and the before/after with decisions.css', () => {
     expect(html).toContain('<div class="vd-table" data-variant="reading">');
@@ -145,7 +202,7 @@ const FAKE: Charte = {
 };
 
 describe('the charte is data', () => {
-  // The reserved mark « Lecture de Vauban » belongs to the grammar, so the reading block is left out here.
+  // The reserved opening line of the reading block belongs to the grammar, so the reading block is left out here.
   const source = fixture('reference.md').replace(/## Ce que je comprends de vos cas \{lecture\}[\s\S]*?(?=## Ce que nous)/, '');
   const doc = parseOk(source);
   const withFake = compose(doc, FAKE);
@@ -169,7 +226,7 @@ describe('the charte is data', () => {
   });
 
   it('changes nothing in the structure of the pages', () => {
-    const strip = (h: string) => h.replace(/<svg[\s\S]*?<\/svg>/g, '');
+    const strip = (h: string) => h.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/classDef coince [^<]*/g, '');
     const a = strip(composeParts(doc, FAKE).html);
     expect(a.length).toBeGreaterThan(1000);
     expect(a).toBe(strip(composeParts(doc, VAUBAN_CHARTE).html));
