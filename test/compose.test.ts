@@ -8,7 +8,7 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
 // Frozen fingerprint of the reference restitution composed with VAUBAN_CHARTE. It changes when a
 // composition, the profile or a copied DS sheet changes: update it on purpose, after looking at the render.
-const REFERENCE_FINGERPRINT = '82fbebb0560ff19b0558a56417f8a16e5e8f78dd5e450fb4b09ab29f1a463acc';
+const REFERENCE_FINGERPRINT = 'a1bfeed43af178923bea10a0af872a435348a54436134e99de8e5a8a62a3ca24';
 
 describe('reference composition', () => {
   const doc = parseOk(fixture('reference.md'));
@@ -22,19 +22,19 @@ describe('reference composition', () => {
     expect(compose(doc, VAUBAN_CHARTE)).toBe(html);
   });
 
-  it('makes 12 A4 pages with a numbered footer', () => {
+  it('starts with the cover and explicit page breaks, before browser measurement', () => {
     const c = composeParts(doc, VAUBAN_CHARTE);
-    expect(c.pageCount).toBe(12);
-    expect(c.html.match(/class="vd-document va-page"/g)).toHaveLength(12);
-    expect(c.html).toContain('02 / 12');
-    expect(c.html).toContain('12 / 12');
+    expect(c.pageCount).toBe(5);
+    expect(c.html.match(/class="vd-document va-page"/g)).toHaveLength(5);
+    expect(c.html).toContain('02 / 05');
+    expect(c.html).toContain('05 / 05');
   });
 
-  it('puts one page per part and per case, a page after each ---', () => {
-    const labels = [...composeParts(doc, VAUBAN_CHARTE).html.matchAll(/aria-label="([^"]*)"/g)].map((m) => m[1]);
-    expect(labels).toContain('Le planning des tournages et les validations client');
-    expect(labels).toContain('Le pipe du lundi');
-    expect(labels).toContain('Ce que nous n&#39;avons pas abordé'.replace('&#39;', "'"));
+  it('keeps the cases and all block titles in source order without implicit breaks', () => {
+    const content = composeParts(doc, VAUBAN_CHARTE).html;
+    expect(content.indexOf('Le planning des tournages et les validations client')).toBeLessThan(content.indexOf('Le pipe du lundi'));
+    expect(content).toContain("Ce que nous n'avons pas abordé");
+    expect(content).toContain('<section class="vr-section"');
   });
 
   it('hands the flowcharts to Mermaid and marks the stuck steps with the accent of the charte', () => {
@@ -51,8 +51,8 @@ describe('reference composition', () => {
     const script = composeParts(doc, VAUBAN_CHARTE).script;
     expect(() => new Function(script)).not.toThrow();
     expect(script).not.toMatch(/=>|\blet\b|\bconst\b|`|\?\./);
-    // body size of the design system and the smallest text a diagram may keep before it gets a page of its own
-    expect(script).toContain('"body":16,"min":11');
+    // Diagram candidates target the body size of the design system, independently of previous sections.
+    expect(script).toContain('"body":16');
     expect(script).toContain('.va-page');
     // page continuation: cuts between elements, repeats a table head, keeps the reading box going
     expect(script).toContain('thead');
@@ -86,7 +86,7 @@ describe('reference composition', () => {
 
   it('puts the last block on the night surface', () => {
     expect(html).toContain('data-surface="nuit"');
-    expect(html.match(/data-surface="nuit"/g)).toHaveLength(1);
+    expect(composeParts(doc, VAUBAN_CHARTE).html.match(/<section class="vr-section" data-surface="nuit"/g)).toHaveLength(1);
   });
 
   it('escapes what the person wrote', () => {
@@ -142,15 +142,16 @@ describe('the other genres', () => {
   it('heads the first case page with the block title when the block has no text before it', () => {
     const d = parseOk('# T\n23 octobre 2026 · A\n\n## Vos cas {cas}\n\n### Un cas\nTexte.\n\n### Un autre\nSuite.\n');
     const c = composeParts(d, VAUBAN_CHARTE);
-    expect(c.pageCount).toBe(3);
+    expect(c.pageCount).toBe(2);
     const pages = c.html.split('<article').slice(2);
     expect(pages[0]).toContain('<header class="vd-heading"><h2>Vos cas</h2></header>');
     expect(pages[0]).toContain('<h3>Un cas</h3>');
-    expect(pages[1]).not.toContain('vd-heading');
+    expect(pages).toHaveLength(1);
+    expect(pages[0]).toContain('<h3>Un autre</h3>');
   });
-  it('keeps a page of its own for the mindmap before the first case', () => {
+  it('lets the browser place a mindmap and the following case according to available space', () => {
     const d = parseOk('# T\n23 octobre 2026 · A\n\n## Vos cas {cas}\n```mermaid\nmindmap\n  root((Vos cas))\n    un\n```\n\n### Un cas\nTexte.\n');
-    expect(composeParts(d, VAUBAN_CHARTE).pageCount).toBe(3);
+    expect(composeParts(d, VAUBAN_CHARTE).pageCount).toBe(2);
   });
   it('composes tables with vd-table and the before/after with decisions.css', () => {
     expect(html).toContain('<div class="vd-table" data-variant="reading">');

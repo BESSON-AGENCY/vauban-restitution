@@ -34,7 +34,7 @@ function page(markdown: string | null, charte?: unknown) {
 describe('browser bundle', () => {
   it('reads the Markdown script and composes the pages', () => {
     const { document } = page(fixture('reference.md'));
-    expect(document.querySelectorAll('.va-page')).toHaveLength(12);
+    expect(document.querySelectorAll('.va-page')).toHaveLength(5);
     expect(document.title).toBe('Vos priorités, vos irritants, ce qui ne va pas');
     expect(document.querySelector('style')!.textContent).toContain('--ds-blue:#0755ff');
     expect(document.querySelector('link[rel=stylesheet]')!.getAttribute('href')).toContain('fonts.googleapis.com');
@@ -62,7 +62,8 @@ describe('browser bundle', () => {
   it('accepts a Markdown indented inside the page', () => {
     const md = fixture('genres.md').split('\n').map((l) => (l ? `    ${l}` : l)).join('\n');
     const { document } = page(md);
-    expect(document.querySelectorAll('.va-page').length).toBeGreaterThan(5);
+    expect(document.querySelectorAll('.va-page')).toHaveLength(2);
+    expect(document.querySelectorAll('.vr-section').length).toBeGreaterThan(5);
   });
 
   it('shows the grammar refusals readably', () => {

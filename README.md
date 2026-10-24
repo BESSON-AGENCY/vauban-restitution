@@ -22,7 +22,7 @@ Sans script (un canevas qui n'exécute rien), rien ne s'affiche : le repli est l
 
 ## La grammaire
 
-Chaque `## Titre {genre}` ouvre une partie, donc une page. Le genre vient d'un catalogue fermé ; tout ce que la grammaire ne nomme pas est refusé avec sa ligne.
+Chaque `## Titre {genre}` ouvre une rubrique. Les rubriques courtes s’enchaînent sur la même page ; le navigateur mesure leur place après le chargement des polices et le rendu des schémas. La couverture reste isolée, et `---` impose un saut de page. Le genre vient d'un catalogue fermé ; tout ce que la grammaire ne nomme pas est refusé avec sa ligne.
 
 ````
 # Titre du document
@@ -42,7 +42,7 @@ Un paragraphe (le premier est le chapeau). **gras** et *italique* seulement.
 ---                          (saut de page sans titre)
 
 ## Vos cas {cas}
-### Un cas                    (une page par cas)
+### Un cas                    (reste avec son contenu si la place le permet)
 ```mermaid
 flowchart TB
   A["étape<br/>rôles"] --> B["étape qui coince<br/>rôles"]
@@ -65,7 +65,7 @@ flowchart TB
 
 Un chiffre dit se lit comme du texte : la ligne entière à la taille du chapeau, le nombre en bleu. L'exergue est à 24 px.
 
-Tous les schémas passent par Mermaid, avec un thème tiré de la charte : flowcharts (déroulés, avec leurs branches et leurs boucles), timelines (frises), carte et parcours. L'étape marquée `class X coince` ressort dans la couleur d'accent de la charte (le moteur pose lui-même la `classDef`, celle de l'assistant est ignorée). Sans Mermaid, le texte de secours de chaque schéma reste affiché. Un bloc `cas` sans carte avant son premier `###` n'a pas de page de titre seule : son titre coiffe la page du premier cas.
+Tous les schémas passent par Mermaid, avec un thème tiré de la charte : flowcharts (déroulés, avec leurs branches et leurs boucles), timelines (frises), carte et parcours. L'étape marquée `class X coince` ressort dans la couleur d'accent de la charte (le moteur pose lui-même la `classDef`, celle de l'assistant est ignorée). Sans Mermaid, le texte de secours de chaque schéma reste affiché. Le titre d’une rubrique reste avec son premier contenu. Un cas ou une rubrique qui tient sur une page vide reste entier : il passe à la suivante seulement s’il ne tient plus dans la place disponible. Une longue rubrique continue entre paragraphes, éléments de liste ou lignes de tableau ; une table reprend son en-tête et la lecture conserve son encadré. Le dernier bloc garde son fond nuit sous forme d’encadré, sans imposer une page à lui seul. Les pieds de page et libellés accessibles sont renumérotés après la mesure.
 
 La liste complète des refus est dans `test/grammar.test.ts`.
 
@@ -80,7 +80,7 @@ const html = compose(result.document, VAUBAN_CHARTE);   // page HTML autonome
 const refusals = validate(markdown, frame);     // frame facultative : suite et titres des blocs d'un modèle
 ```
 
-`composeParts(document, charte)` rend `{ css, html, fontsHref, mermaidScript, pageCount }` pour insérer le document dans une autre page. Aucune dépendance, aucun DOM dans le parseur ni dans les compositions.
+`composeParts(document, charte)` rend `{ css, html, fontsHref, script, mermaidScript, pageCount }` pour insérer le document dans une autre page. Le nombre `pageCount` est celui de la composition initiale (couverture et sauts explicites) ; le script mesure ensuite les pages finales à l’écran ; l’impression A4 reprend ces pages après la fin de cette mesure. `data-vr-ready="1"` sur la racine HTML signale la fin de la mesure. Un élément indivisible plus haut qu’une page conserve son texte et son titre, et sa page porte `data-vr-overflow="1"` : il demande une correction de la matière, pas une réduction de la taille de lecture. Aucune dépendance, aucun DOM dans le parseur ni dans les compositions.
 
 ## La charte
 
@@ -121,6 +121,6 @@ npm run example   # dist/exemple.html depuis fixtures/reference.md
 
 ## Limites connues
 
-- Pas de pagination automatique : une page par partie, par cas et par `---`. Une page dont le contenu dépasse l'A4 grandit, et à l'impression déborde sur une feuille de plus.
+- La pagination automatique exige l’exécution du script et une largeur de page stabilisée. Imprimer après `data-vr-ready="1"` ; sans script, le HTML composé garde les seules coupures explicites et peut déborder. Une unité indivisible plus haute que l’A4 est signalée par `data-vr-overflow="1"`, sans coupe ni perte de texte. La mise en page n’est pas recalculée après un changement de largeur.
 - Le logo est écrit une fois (`<symbol>`) et appelé à chaque page par `<use>`.
 - Mermaid vient de cdnjs au moment de l'affichage : hors ligne, le texte de secours reste.

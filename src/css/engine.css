@@ -23,3 +23,9 @@ body{margin:0;padding:32px 0;background:var(--ds-mist)}
 
 /* 5. Table headings: the DS gets their left alignment from Tailwind classes that the engine does not carry. */
 .vd-table th{text-align:left}
+
+/* 6. Content flows between sections; only the cover and explicit breaks start a page in advance. */
+.vr-section{display:flex;flex-direction:column;gap:28px;min-width:0}
+.vr-section > .vd-heading{break-after:avoid}
+/* The closing surface is a block, so a short list can follow the other sections on the same page. */
+.vr-section[data-surface="nuit"]{--vd-ink:var(--ds-white);--vd-muted:var(--ds-silver);--vd-accent:var(--ds-white);color:var(--vd-ink);background:var(--ds-navy);padding:28px;border-radius:var(--vd-radius)}

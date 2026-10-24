@@ -48,10 +48,10 @@ export function mermaidTheme(charte: Charte): Record<string, string> {
  * 1. Diagrams (only if the document has some). Mermaid is loaded from the CDN and each box is drawn so that it is
  *    never taller than its A4 page. A flowchart is rendered at three node widths and the one with the largest text
  *    is kept; any other kind is rendered at a font size raised so that, once scaled to the page width, its text is
- *    the body size of the design system. If the text would fall under MIN px, the diagram gets a page of its own
- *    when that makes it larger: the text before it stays, the text after it goes to the next page.
+ *    the body size of the design system. The available height is that of a full content page, not the space
+ *    remaining among preceding sections; pagination then moves the diagram when necessary.
  *    Without the script, or if it fails, the fallback text of each box stays on the page.
- * 2. Page continuation (always). A page whose content is taller than its A4 page hands the surplus to a page that
+ * 2. Content pagination (always). Short sections share a page. A page taller than A4 hands its surplus to a page that
  *    follows, with the same header and footer. It cuts only between elements: a paragraph, a list item, a table row,
  *    an intertitre is never left alone at the bottom of a page, a pull quote is never cut. A table that is cut says
  *    its head again; the reading box goes on in the same kind of box.
@@ -60,17 +60,20 @@ export function mermaidTheme(charte: Charte): Record<string, string> {
  */
 const BOOT = String.raw`
 (function(c){
-var BODY=c.body,MIN=c.min;
+if(document.documentElement.getAttribute("data-vr-ready")==="1")return;
+var BODY=c.body;
 function ext(a,b){var o={},k;for(k in a)o[k]=a[k];for(k in b)o[k]=b[k];return o}
 function pageMin(page){return parseFloat(getComputedStyle(page).minHeight)||1123}
-function areaOf(box){var comp=box.parentNode,page=box.closest(".va-page");
+function areaOf(box){var comp=box.closest(".va-composition"),page=box.closest(".va-page");
 return{comp:comp,page:page,min:pageMin(page),chrome:page.offsetHeight-comp.offsetHeight,gap:parseFloat(getComputedStyle(comp).rowGap)||0}}
 function newPage(page,after){var np=page.cloneNode(true),comp=np.querySelector(".va-composition");
 while(comp.firstChild)comp.removeChild(comp.firstChild);
 page.parentNode.insertBefore(np,after.nextSibling);return comp}
 function number(){var pages=document.querySelectorAll("article.va-page"),t=pages.length,i,f;
 function p2(n){return("0"+n).slice(-2)}
-for(i=0;i<t;i++){f=pages[i].querySelector(".va-page-footer span:last-child");if(f)f.textContent=p2(i+1)+" / "+p2(t)}}
+for(i=0;i<t;i++){f=pages[i].querySelector(".va-page-footer span:last-child");if(f)f.textContent=p2(i+1)+" / "+p2(t);
+var heading=pages[i].querySelector(".va-composition h2,.va-composition h3");
+pages[i].setAttribute("aria-label","Page "+(i+1)+(heading?" : "+heading.textContent:""))}}
 
 function diagrams(){
 var boxes=document.querySelectorAll(".vr-diagram[data-mermaid]");if(!boxes.length)return Promise.resolve();
@@ -97,20 +100,7 @@ var fs=r?Math.min(28,Math.max(BODY,Math.round(BODY*r.w/W))):BODY;
 return fs>BODY?one({},fs,1):null}).then(function(){return out})}
 function score(r,W,H){var k=Math.min(1,W/r.w,Math.max(H,1)/r.h);return{r:r,k:k,eff:r.fs*k}}
 function best(list,W,H){var top=null,i,x;for(i=0;i<list.length;i++){x=score(list[i],W,H);if(x.eff>=BODY-0.05)return x;if(!top||x.eff>top.eff)top=x}return top}
-function freeH(box){var a=areaOf(box),prev=box.style.display,kids=a.comp.children,sum=0,n=0,i;
-box.style.display="none";
-for(i=0;i<kids.length;i++){if(kids[i]===box||getComputedStyle(kids[i]).display==="none")continue;sum+=kids[i].offsetHeight;n++}
-a=areaOf(box);box.style.display=prev;
-return a.min-a.chrome-sum-a.gap*n-2}
 function aloneH(box){var a=areaOf(box);return a.min-a.chrome-2}
-function ownPage(box){var a=areaOf(box),kids=[].slice.call(a.comp.children),i=kids.indexOf(box),t=0,rest,before,page=a.page;
-while(t<i&&/vd-(sub)?heading/.test(kids[t].className))t++;
-before=kids.slice(t,i);rest=kids.slice(i+1);
-if(!before.length&&!rest.length)return false;
-var cur=page,comp;
-if(before.length){comp=newPage(page,cur);cur=comp.closest(".va-page");comp.appendChild(box)}
-if(rest.length){comp=newPage(page,cur);rest.forEach(function(el){comp.appendChild(el)})}
-return true}
 function place(box,x){box.innerHTML=x.r.svg;var v=box.querySelector("svg");
 v.setAttribute("width",String(Math.round(x.r.w*x.k)));v.removeAttribute("height");v.style.maxWidth="100%";
 box.removeAttribute("data-mermaid")}
@@ -118,8 +108,7 @@ function draw(box,n){var pre=box.querySelector("pre.mermaid");if(!pre)return;
 var src=pre.textContent.trim(),W=box.clientWidth;
 return gather(box.getAttribute("data-mermaid"),src,"vr-m"+n+"-",W).then(function(list){
 if(!list.length)return;
-var x=best(list,W,freeH(box)),y;
-if(x.eff<MIN){y=best(list,W,aloneH(box));if(y.eff>x.eff+0.5&&ownPage(box))x=best(list,W,freeH(box))}
+var x=best(list,W,aloneH(box));
 place(box,x)})}
 var seq=Promise.resolve();
 Array.prototype.forEach.call(boxes,function(box,n){seq=seq.then(function(){return draw(box,n)}).catch(function(){})});
@@ -128,7 +117,7 @@ document.head.appendChild(s)})}
 
 function isTitle(el){return el.matches(".vd-heading,.vd-subheading")}
 function hostOf(el){
-if(el.matches(".va-composition,.vd-text,.vr-figures,.va-reading-section,ul,ol"))return el;
+if(el.matches(".va-composition,.vr-section,.vd-text,.vr-figures,.va-reading-section,ul,ol"))return el;
 if(el.matches(".vd-callout"))return el.querySelector(":scope > div > div");
 if(el.matches(".vd-table,.vd-comparison"))return el.querySelector("tbody");
 return null}
@@ -140,8 +129,11 @@ if(q.matches(".vd-callout")){sv=q.querySelector(":scope > svg");if(sv)cl.appendC
 if(inner)inner.appendChild(cl);else top=cl;inner=cl});
 return{top:top,inner:inner}}
 /* What of el sticks out under limit: null (nothing), {whole:true} (all of it moves on) or {tail:node} (el is cut and tail holds the rest). */
-function cut(el,limit,force){
-if(el.getBoundingClientRect().bottom<=limit)return null;
+function cut(el,limit,force,capacity,top){
+var rect=el.getBoundingClientRect();
+if(rect.bottom<=limit)return null;
+/* A complete section or case that fits an empty page moves as a unit, title and diagram included. */
+if(el.matches(".vr-section,.va-reading-section")&&rect.height<=capacity&&rect.top>top+1)return{whole:true};
 var host=hostOf(el);if(!host)return{whole:true};
 var kids=[].slice.call(host.children),j=0,partial=false,r=null,s,tailKids,ch;
 if(!kids.length)return{whole:true};
@@ -149,28 +141,37 @@ limit-=Math.max(0,el.getBoundingClientRect().bottom-kids[kids.length-1].getBound
 while(j<kids.length&&kids[j].getBoundingClientRect().bottom<=limit)j++;
 if(j===kids.length)return null;
 s=j;
-if(kids[j].getBoundingClientRect().top<limit){r=cut(kids[j],limit,false);if(r&&r.tail){partial=true;s=j+1}}
+if(kids[j].getBoundingClientRect().top<limit){r=cut(kids[j],limit,force&&kids.slice(0,j).every(isTitle),capacity,top);if(r&&r.tail){partial=true;s=j+1}}
 if(!partial)while(s>0&&isTitle(kids[s-1]))s--;
-if(s===0){if(!force)return{whole:true};s=1}
+if(s===0){if(!force)return{whole:true};
+/* An indivisible first unit may exceed a page; retain its title rather than emitting a title-only page. */
+s=1;while(s<kids.length&&isTitle(kids[s-1]))s++}
 tailKids=kids.slice(s);if(partial)tailKids.unshift(r.tail);
+if(!tailKids.length)return{whole:true};
 ch=chain(el,host);tailKids.forEach(function(k){ch.inner.appendChild(k)});
 return{tail:ch.top}}
 function paginate(){
 var pages=[].slice.call(document.querySelectorAll("article.va-page"));
 pages.forEach(function(page){
-for(var guard=0;guard<40;guard++){
+for(;;){
 var comp=page.querySelector(".va-composition"),pr=page.getBoundingClientRect(),cr=comp.getBoundingClientRect(),
 limit=pr.top+pageMin(page)-(pr.bottom-cr.bottom),r;
 if(cr.bottom<=limit+1)break;
-r=cut(comp,limit,true);
-if(!r||!r.tail||!r.tail.children.length)break;
+r=cut(comp,limit,true,limit-cr.top,cr.top);
+if(!r||!r.tail||!r.tail.children.length){page.setAttribute("data-vr-overflow","1");break;}
 var nc=newPage(page,page);
 while(r.tail.firstChild)nc.appendChild(r.tail.firstChild);
-page=nc.closest(".va-page")}})}
+page=nc.closest(".va-page")}});
+/* Report a genuinely indivisible unit after every cut, including the page it left behind. */
+Array.prototype.forEach.call(document.querySelectorAll("article.va-page"),function(p){
+var comp=p.querySelector(".va-composition"),pr=p.getBoundingClientRect(),cr=comp.getBoundingClientRect();
+if(cr.bottom>pr.top+pageMin(p)-(pr.bottom-cr.bottom)+1)p.setAttribute("data-vr-overflow","1");
+else p.removeAttribute("data-vr-overflow")})}
 
 var fam=String(c.theme.fontFamily).split(",")[0];
 (document.fonts?Promise.all([document.fonts.load("16px "+fam),document.fonts.load("600 16px "+fam),document.fonts.ready]).catch(function(){}):Promise.resolve())
-.then(diagrams).then(function(){paginate();number();document.documentElement.setAttribute("data-vr-ready","1")})
+.then(diagrams).then(function(){return document.fonts?document.fonts.ready:Promise.resolve()})
+.then(function(){paginate();number();document.documentElement.setAttribute("data-vr-ready","1")})
 })(`;
 
 export function bootScript(charte: Charte): string {
@@ -179,7 +180,6 @@ export function bootScript(charte: Charte): string {
     integrity: MERMAID_INTEGRITY,
     theme: mermaidTheme(charte),
     body: 16,
-    min: 11,
   }).replace(/</g, '\\u003c');
   return `${BOOT.trim()}${cfg});`;
 }
