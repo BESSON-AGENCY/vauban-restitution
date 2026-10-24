@@ -1,4 +1,4 @@
-export { CATALOGUE, BLOCK_KINDS, READING_MARK, LEGACY_READING_MARK, READING_MARKS, READING_TITLE, CLOSING_TITLE } from './catalogue.js';
+export { CATALOGUE, BLOCK_KINDS, PREFERRED_READING_MARK, READING_MARK, LEGACY_READING_MARK, READING_MARKS, READING_TITLE, CLOSING_TITLE } from './catalogue.js';
 export type { BlockSpec, ItemKind } from './catalogue.js';
 export { assertCharte, REQUIRED_TOKENS, VAUBAN_CHARTE } from './charte.js';
 export type { Charte } from './charte.js';

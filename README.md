@@ -60,7 +60,7 @@ flowchart TB
 | `journee` | une journée type (`flowchart`, ou `journey` avec scores) | Mermaid |
 | `avant-apres` | un tableau à 2 colonnes | `vd-comparison` |
 | `tableau` | un tableau à colonnes | `vd-table` |
-| `lecture` | `## Ce que je comprends de vos cas {lecture}`, ouvert par `Ma lecture, pas vos mots.` | `vd-callout` |
+| `lecture` | `## Ce que je comprends de vos cas {lecture}`, ouvert de préférence par `Voici ma lecture de vos cas. Vous pouvez la corriger.` | `vd-callout` |
 | `reste` | `## Ce que nous n'avons pas abordé {reste}`, liste de `- « … »` | `vd-next-steps` sur fond nuit |
 
 Un chiffre dit se lit comme du texte : la ligne entière à la taille du chapeau, le nombre en bleu. L'exergue est à 24 px.
@@ -102,7 +102,7 @@ Aucune valeur de charte n'est écrite dans les compositions ni dans le CSS : tou
 
 `npm run parity` compare `test/fixtures/parity/` (corpus partagé avec MIROIR : même verdict des deux analyseurs pour chaque fichier) au dossier de MIROIR (chemin en argument ou `MIROIR_PARITY_DIR`).
 
-Depuis la 0.2.0 le bloc de lecture s'ouvre par `Ma lecture, pas vos mots.` ; l'ancienne ligne `Lecture de Vauban, pas vos mots.` reste acceptée, et affichée telle qu'écrite, pour les restitutions déjà écrites. Le corpus de parité le fixe en trois fichiers (20 : ancienne ligne, valide ; 31 : nouvelle ligne, valide ; 32 : autre ligne, refusée). **MIROIR doit copier 31 et 32 dans son corpus et accepter les deux lignes dans son propre analyseur**, sinon `npm run parity` échoue.
+Le bloc de lecture s'ouvre de préférence par `Voici ma lecture de vos cas. Vous pouvez la corriger.` (`PREFERRED_READING_MARK`). Les lignes `Ma lecture, pas vos mots.` (`READING_MARK`, introduite en 0.2.0) et `Lecture de Vauban, pas vos mots.` (`LEGACY_READING_MARK`) restent acceptées, avec leurs exports inchangés. Les trois lignes sont affichées telles qu'écrites ; le moteur ne réécrit pas le Markdown. Le corpus de parité le fixe en quatre fichiers (20 et 31 : lignes historiques valides ; 32 : autre ligne refusée ; 33 : ouverture préférée valide). **MIROIR doit copier 33 dans son corpus et accepter les trois lignes dans son propre analyseur**, sinon `npm run parity` échoue. La version du moteur qui accepte cette ouverture doit être publiée et disponible avant que MIROIR commence à la produire ; ce lot local ne publie aucune version.
 
 `npm run drift` (ou `node scripts/check-ds-drift.mjs <chemin du dépôt du design system>`, ou `VAUBAN_DS_DIR`) compare les copies, les jetons de `VAUBAN_CHARTE`, le logo et le motif au dépôt du design system, et échoue en cas de dérive.
 

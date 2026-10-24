@@ -8,7 +8,7 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
 // Frozen fingerprint of the reference restitution composed with VAUBAN_CHARTE. It changes when a
 // composition, the profile or a copied DS sheet changes: update it on purpose, after looking at the render.
-const REFERENCE_FINGERPRINT = '37c4091768d849f30021439c64a08ecae23684fea0412b1378478414e8809d0c';
+const REFERENCE_FINGERPRINT = '320555b3a8a16b3bd6f3122178f159cac59a9bc6dc9260677b2998ccfd1f2752';
 
 describe('reference composition', () => {
   const doc = parseOk(fixture('reference.md'));
@@ -82,6 +82,17 @@ describe('reference composition', () => {
   it('marks the reading as Vauban, not the person', () => {
     expect(html).toContain('<h3>Ma lecture, pas vos mots.</h3>');
     expect(html).toContain('data-variant="lecture"');
+  });
+
+  it.each([
+    'Voici ma lecture de vos cas. Vous pouvez la corriger.',
+    'Ma lecture, pas vos mots.',
+    'Lecture de Vauban, pas vos mots.',
+  ])('renders the accepted opening as written: %s', (opening) => {
+    const source = fixture('reference.md').replace('Ma lecture, pas vos mots.', opening);
+    const content = composeParts(parseOk(source), VAUBAN_CHARTE).html;
+    const reference = composeParts(doc, VAUBAN_CHARTE).html;
+    expect(content).toBe(reference.replace('<h3>Ma lecture, pas vos mots.</h3>', `<h3>${opening}</h3>`));
   });
 
   it('puts the last block on the night surface', () => {

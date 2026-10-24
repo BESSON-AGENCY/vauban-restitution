@@ -93,6 +93,18 @@ describe('content pagination with measured boxes (VBA-3223)', () => {
     expect(pages[2]!.textContent).toContain('First.');
   });
 
+  it('keeps a nested title with the following pull quote when its wrapper contains only the title', async () => {
+    const { document } = await paginate(wrap('## Narrative {recit}\nPrelude.\n\n### Quoted argument\n> « The words that support it. »\n\nFollowing paragraph.\n'), new Map([['Prelude.', 700]]));
+    const pages = pagesOf(document);
+    expect(pages[1]!.textContent).not.toContain('Quoted argument');
+    expect(pages[2]!.querySelector('h3')!.textContent).toBe('Quoted argument');
+    expect(pages[2]!.querySelector('.vd-pullquote')!.textContent).toBe('« The words that support it. »');
+    expect([...document.querySelectorAll('.vr-section p')].map((p) => p.textContent)).toEqual([
+      'Prelude.', '« The words that support it. »', 'Following paragraph.',
+    ]);
+    expect(document.querySelector('[data-vr-overflow]')).toBeNull();
+  });
+
   it('reserves the parent heading when a long case body would fit only without that heading', async () => {
     const paragraphs = ['First case paragraph.', 'Second case paragraph.', 'Third case paragraph.', 'Fourth case paragraph.'];
     const { document } = await paginate(wrap('## Summary {recit}\nOpening.\n\n**Takeaway.**\n\n## Cases {cas}\n### Long case\n' + paragraphs.join('\n\n') + '\n'),

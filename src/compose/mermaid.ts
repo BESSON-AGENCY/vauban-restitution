@@ -115,7 +115,10 @@ Array.prototype.forEach.call(boxes,function(box,n){seq=seq.then(function(){retur
 seq.then(done,done)};
 document.head.appendChild(s)})}
 
-function isTitle(el){return el.matches(".vd-heading,.vd-subheading")}
+function isTitle(el){
+if(el.matches(".vd-heading,.vd-subheading"))return true;
+/* An intertitle before a quote or diagram has its own reading-section wrapper, without prose. */
+return el.matches(".va-reading-section")&&el.children.length>0&&[].every.call(el.children,isTitle)}
 function hostOf(el){
 if(el.matches(".va-composition,.vr-section,.vd-text,.vr-figures,.va-reading-section,ul,ol"))return el;
 if(el.matches(".vd-journey-wrap"))return el.querySelector(":scope > ol");

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BLOCK_KINDS, CATALOGUE } from '../src/catalogue.js';
 import { checkFrame, formatRefusal, parse, validate } from '../src/grammar.js';
+import { LEGACY_READING_MARK, PREFERRED_READING_MARK, READING_MARK, READING_MARKS } from '../src/index.js';
 import { fixture, parseOk, wrap } from './helpers.js';
 
 describe('reference document', () => {
@@ -56,9 +57,25 @@ describe('reference document', () => {
     expect(parseOk(old).blocks[4]!.items[0]).toMatchObject({ kind: 'p', text: 'Lecture de Vauban, pas vos mots.' });
   });
 
+  it('accepts the preferred editorial opening without changing the reading content', () => {
+    const opening = 'Voici ma lecture de vos cas. Vous pouvez la corriger.';
+    const source = fixture('reference.md').replace('Ma lecture, pas vos mots.', opening);
+    expect(validate(source)).toEqual([]);
+    const reading = parseOk(source).blocks[4]!;
+    expect(reading.items[0]).toEqual({ ...doc.blocks[4]!.items[0], text: opening });
+    expect(reading.items.slice(1)).toEqual(doc.blocks[4]!.items.slice(1));
+  });
+
+  it('keeps the public opening constants compatible and lists only the three accepted lines', () => {
+    expect(PREFERRED_READING_MARK).toBe('Voici ma lecture de vos cas. Vous pouvez la corriger.');
+    expect(READING_MARK).toBe('Ma lecture, pas vos mots.');
+    expect(LEGACY_READING_MARK).toBe('Lecture de Vauban, pas vos mots.');
+    expect(READING_MARKS).toEqual([PREFERRED_READING_MARK, READING_MARK, LEGACY_READING_MARK]);
+  });
+
   it('refuses any other opening line, and names the current one', () => {
     const other = fixture('reference.md').replace('Ma lecture, pas vos mots.', 'Ma lecture à moi, pas vos mots.');
-    expect(validate(other).map(formatRefusal).join('\n')).toContain('Ma lecture, pas vos mots.');
+    expect(validate(other).map(formatRefusal).join('\n')).toContain('Voici ma lecture de vos cas. Vous pouvez la corriger.');
   });
 
   it('validates with no refusal', () => {
@@ -122,6 +139,12 @@ const REFUSALS: [string, string, number, string][] = [
   [
     'reading point without a quotation',
     wrap('Ma lecture, pas vos mots.\n\nUn point sans citation.', '## Ce que je comprends de vos cas {lecture}'),
+    7,
+    'contient une citation',
+  ],
+  [
+    'preferred opening still requires a quotation in each reading point',
+    wrap('Voici ma lecture de vos cas. Vous pouvez la corriger.\n\nUn point sans citation.', '## Ce que je comprends de vos cas {lecture}'),
     7,
     'contient une citation',
   ],
