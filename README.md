@@ -8,12 +8,12 @@ Moteur de composition des restitutions : un Markdown à grammaire fermée devien
 
 Code propriétaire (UNLICENSED), publié pour être chargé par les applications de Vauban et de ses clients : aucune réutilisation, copie ni modification sans accord écrit (voir `LICENSE`).
 
-URL CDN : `https://cdn.jsdelivr.net/npm/@vaubanhq/restitution@0.2.0/dist/browser/restitution.js` (jsdelivr sert le paquet npm). L'URL `/gh/` de jsdelivr (`https://cdn.jsdelivr.net/gh/BESSON-AGENCY/vauban-restitution@v0.2.0/dist/browser/restitution.js`) n'est pas chargeable par un artefact : le bac à sable n'accepte que `/npm/`.
+URL CDN : `https://cdn.jsdelivr.net/npm/@vaubanhq/restitution@0.2.1/dist/browser/restitution.js` (jsdelivr sert le paquet npm). L'URL `/gh/` de jsdelivr (`https://cdn.jsdelivr.net/gh/BESSON-AGENCY/vauban-restitution@v0.2.1/dist/browser/restitution.js`) n'est pas chargeable par un artefact : le bac à sable n'accepte que `/npm/`.
 
 ## Le document minimal d'un artefact
 
 ```html
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>…</title></head><body><script type="text/markdown" id="restitution">…le Markdown…</script><script src="https://cdn.jsdelivr.net/npm/@vaubanhq/restitution@0.2.0/dist/browser/restitution.js"></script></body></html>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>…</title></head><body><script type="text/markdown" id="restitution">…le Markdown…</script><script src="https://cdn.jsdelivr.net/npm/@vaubanhq/restitution@0.2.1/dist/browser/restitution.js"></script></body></html>
 ```
 
 Le chargeur lit le script `#restitution` (le Markdown peut être indenté dans la page), le lit selon la grammaire, compose avec `VAUBAN_CHARTE` (ou la charte posée dans `window.RESTITUTION_CHARTE` avant le chargeur), injecte le HTML et le CSS, charge la police (Jost, avec repli système) et, s'il y a un schéma à dessiner, Mermaid 11.12.0 depuis cdnjs (avec contrôle d'intégrité SRI sha384, `scripts/sri.mjs`). Si le Markdown sort de la grammaire, la page affiche la liste des refus (ligne et raison) au lieu du document.
@@ -102,9 +102,13 @@ Aucune valeur de charte n'est écrite dans les compositions ni dans le CSS : tou
 
 `npm run parity` compare `test/fixtures/parity/` (corpus partagé avec MIROIR : même verdict des deux analyseurs pour chaque fichier) au dossier de MIROIR (chemin en argument ou `MIROIR_PARITY_DIR`).
 
-Le bloc de lecture s'ouvre de préférence par `Voici ma lecture de vos cas. Vous pouvez la corriger.` (`PREFERRED_READING_MARK`). Les lignes `Ma lecture, pas vos mots.` (`READING_MARK`, introduite en 0.2.0) et `Lecture de Vauban, pas vos mots.` (`LEGACY_READING_MARK`) restent acceptées, avec leurs exports inchangés. Les trois lignes sont affichées telles qu'écrites ; le moteur ne réécrit pas le Markdown. Le corpus de parité le fixe en quatre fichiers (20 et 31 : lignes historiques valides ; 32 : autre ligne refusée ; 33 : ouverture préférée valide). **MIROIR doit copier 33 dans son corpus et accepter les trois lignes dans son propre analyseur**, sinon `npm run parity` échoue. La version du moteur qui accepte cette ouverture doit être publiée et disponible avant que MIROIR commence à la produire ; ce lot local ne publie aucune version.
+Le bloc de lecture s'ouvre de préférence par `Voici ma lecture de vos cas. Vous pouvez la corriger.` (`PREFERRED_READING_MARK`). Les lignes `Ma lecture, pas vos mots.` (`READING_MARK`, introduite en 0.2.0) et `Lecture de Vauban, pas vos mots.` (`LEGACY_READING_MARK`) restent acceptées, avec leurs exports inchangés. Les trois lignes sont affichées telles qu'écrites ; le moteur ne réécrit pas le Markdown. Le corpus de parité le fixe en quatre fichiers (20 et 31 : lignes historiques valides ; 32 : autre ligne refusée ; 33 : ouverture préférée valide). **MIROIR doit copier 33 dans son corpus et accepter les trois lignes dans son propre analyseur**, sinon `npm run parity` échoue. La version 0.2.1 qui accepte cette ouverture doit être publiée et disponible avant que MIROIR commence à la produire.
 
 `npm run drift` (ou `node scripts/check-ds-drift.mjs <chemin du dépôt du design system>`, ou `VAUBAN_DS_DIR`) compare les copies, les jetons de `VAUBAN_CHARTE`, le logo et le motif au dépôt du design system, et échoue en cas de dérive.
+
+## Version 0.2.1
+
+Cette version corrige les pages vides induites par les sections sans contenu après un saut explicite, en conservant la couverture, les sauts demandés et l’ordre des titres et des contenus. Elle inclut aussi l’ouverture de lecture corrigible et le maintien des titres avec leur citation ou leur schéma, déjà intégrés dans la branche principale ; les deux ouvertures historiques restent acceptées et le texte stocké reste inchangé. Aucune segmentation automatique des schémas, modification des styles ou réduction du texte n’est introduite.
 
 ## Publier une version
 
