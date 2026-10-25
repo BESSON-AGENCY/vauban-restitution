@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { VAUBAN_CHARTE } from '../src/charte.js';
 import { composeParts } from '../src/compose/index.js';
 import { parseOk } from './helpers.js';
+import { SEGMENTED_TIMELINE } from './fixtures/timeline-segmented.js';
 
 /** Happy DOM has no layout. These measured boxes exercise page cuts; real font/SVG layout is checked in the browser. */
 async function paginate(markdown: string, tallText = new Map<string, number>(), diagramHeight = 400) {
@@ -194,4 +195,35 @@ describe('content pagination with measured boxes (VBA-3223)', () => {
     expect(pages[2]!.textContent).toContain('After.');
     expect(pages[2]!.textContent).toContain('Final.');
   });
+
+  it('keeps explicitly separated timelines on three content pages without empty break placeholders', async () => {
+    const markdown = SEGMENTED_TIMELINE;
+    // A title and a diagram fit an empty page, but the extra gap of an empty break section does not.
+    const { document } = await paginate(markdown, new Map(), 820);
+    const pages = pagesOf(document);
+    expect(pages).toHaveLength(4);
+    expect(pages[0]!.querySelector('.va-cover')).not.toBeNull();
+    expect(pages[0]!.querySelector('.vr-section')).toBeNull();
+    const titles = ['Chronologie \u2014 1/3', 'Chronologie \u2014 2/3', 'Chronologie \u2014 3/3'];
+    pages.slice(1).forEach((page, i) => {
+      expect(page.querySelectorAll('.vd-heading')).toHaveLength(1);
+      expect(page.querySelector('.vd-heading h2')!.textContent).toBe(titles[i]);
+      expect(page.querySelectorAll('.vr-diagram')).toHaveLength(1);
+      expect(page.querySelectorAll('.vr-section')).toHaveLength(1);
+    });
+    expect([...document.querySelectorAll('.vr-diagram pre.mermaid')].map((pre) => pre.textContent!.trim()))
+      .toEqual([...markdown.matchAll(/```mermaid\n([\s\S]*?)\n```/g)].map((match) => match[1]!.trim()));
+    expect(document.querySelector('[data-vr-overflow]')).toBeNull();
+  });
+
+
+  it('preserves consecutive explicit page boundaries even when an intentional page has no content', async () => {
+    const { document } = await paginate(wrap('## First {recit}\nBefore.\n\n---\n\n---\n\nAfter.\n'));
+    const pages = pagesOf(document);
+    expect(pages).toHaveLength(4);
+    expect(pages[1]!.textContent).toContain('Before.');
+    expect(pages[2]!.querySelector('.va-composition')!.textContent).toBe('');
+    expect(pages[3]!.textContent).toContain('After.');
+  });
+
 });

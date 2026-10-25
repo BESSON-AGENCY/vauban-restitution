@@ -165,6 +165,10 @@ if(!tailKids.length)return{whole:true};
 ch=chain(el,host);tailKids.forEach(function(k){ch.inner.appendChild(k)});
 return{tail:ch.top}}
 function paginate(){
+/* A trailing explicit break leaves an empty section before the next block. It carries no content,
+   but its flex gap can move that block to a new page and leave a blank page behind. Keep the page
+   boundary itself; discard only these empty layout placeholders before measuring. */
+Array.prototype.forEach.call(document.querySelectorAll(".vr-section"),function(section){if(!section.firstChild)section.remove()});
 var pages=[].slice.call(document.querySelectorAll("article.va-page"));
 pages.forEach(function(page){
 for(;;){
