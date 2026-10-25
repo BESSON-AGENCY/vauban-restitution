@@ -8,7 +8,8 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
 // Frozen fingerprint of the reference restitution composed with VAUBAN_CHARTE. It changes when a
 // composition, the profile or a copied DS sheet changes: update it on purpose, after looking at the render.
-const REFERENCE_FINGERPRINT = '320555b3a8a16b3bd6f3122178f159cac59a9bc6dc9260677b2998ccfd1f2752';
+// VBA-3223: only the inline pagination runtime changes; the static markup and styles stay identical.
+const REFERENCE_FINGERPRINT = '2b376f0cdd39c9c692bf3faca43b0a8823234a227ade11e1d1b9a2fe0981e055';
 
 describe('reference composition', () => {
   const doc = parseOk(fixture('reference.md'));
