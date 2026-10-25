@@ -1,6 +1,6 @@
 {
   "name": "@vaubanhq/restitution",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Closed-grammar Markdown to A4 restitution document: parser, compositions, charte, and a self-contained browser loader.",
   "type": "module",
   "private": false,
